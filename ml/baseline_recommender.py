@@ -116,6 +116,55 @@ def load_onet(onet_dir):
     return data
 
 
+def load_from_mysql(engine=None):
+    """Same tables as load_onet(), read from MySQL instead of the .txt files.
+
+    Fill the database first with scripts/load_onet_to_mysql.py. Each query returns
+    long rows in the same shape as the O*NET files (code, element, scale, value),
+    so they go through the same _pivot() and give identical results.
+    """
+    from sqlalchemy import text   # imported here so the file-based engine works without SQLAlchemy
+    if engine is None:
+        from backend.db import get_engine
+        engine = get_engine()
+
+    def query(sql):
+        with engine.connect() as conn:
+            df = pd.read_sql(text(sql), conn)
+        return df.rename(columns={"code": "O*NET-SOC Code", "element": "Element Name",
+                                  "scale": "Scale ID", "value": "Data Value"})
+
+    careers = query("SELECT onet_code AS code, title, description, job_zone FROM career")
+    interests = query("""
+        SELECT c.onet_code AS code, i.name AS element, 'OI' AS scale, ci.score AS value
+        FROM career_interest ci JOIN career c USING (career_id) JOIN interest i USING (interest_id)""")
+    skills = query("""
+        SELECT c.onet_code AS code, s.name AS element, 'IM' AS scale, cs.importance AS value
+        FROM career_skill cs JOIN career c USING (career_id) JOIN skill s USING (skill_id)
+        UNION ALL
+        SELECT c.onet_code, s.name, 'LV', cs.required_level
+        FROM career_skill cs JOIN career c USING (career_id) JOIN skill s USING (skill_id)""")
+    knowledge = query("""
+        SELECT c.onet_code AS code, k.name AS element, 'IM' AS scale, ck.importance AS value
+        FROM career_knowledge ck JOIN career c USING (career_id) JOIN knowledge k USING (knowledge_id)""")
+
+    careers = careers.set_index("O*NET-SOC Code")
+    data = {
+        "occupations": careers.rename(columns={"title": "Title", "description": "Description"})[["Title", "Description"]],
+        "interests": _pivot(interests, "OI")[RIASEC],
+        "skill_importance": _pivot(skills, "IM"),
+        "skill_level": _pivot(skills, "LV"),
+        "knowledge_importance": _pivot(knowledge, "IM"),
+    }
+    job_zone = pd.to_numeric(careers["job_zone"], errors="coerce").dropna()
+    if not job_zone.empty:
+        data["job_zone"] = job_zone
+    data["codes"] = (data["interests"].index
+                     .intersection(data["skill_importance"].index)
+                     .intersection(data["knowledge_importance"].index))
+    return data
+
+
 # ---------------------------------------------------------------- matching
 def _student_vector(ratings, mapping):
     """Turn the student's 1-5 ratings into values for O*NET element names."""

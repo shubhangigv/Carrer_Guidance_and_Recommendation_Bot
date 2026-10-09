@@ -13,7 +13,7 @@ from the student's own answers, finds skill gaps, and builds a learning roadmap.
 | Working browser prototype (`frontend/prototype/pathfinder.html`) | Done |
 | Tests for the engine (`tests/`) | Done |
 | Student survey script (`tools/create_career_survey.gs`) | Ready, not sent yet |
-| MySQL database | Designed (ER), not built |
+| MySQL database: 13-table schema, O*NET loader, engine reads from MySQL (`database/`, `backend/db.py`) | Done (verify on your PC with the real O*NET data) |
 | FastAPI backend, React frontend | Next |
 | ML comparison, Sentence-BERT, hybrid ranking | After survey data |
 | ESCO, NCO-2015, jobs, resume analyser, RAG chatbot | Later |
@@ -29,6 +29,15 @@ pip install -r requirements.txt
 Download the O*NET 31.0 text database from
 https://www.onetcenter.org/dl_files/database/db_31_0_text.zip and extract it into `data/raw/onet/`.
 
+### MySQL (Phase 1)
+
+1. Install MySQL Server and MySQL Workbench. In Workbench, run:
+   `CREATE DATABASE career_guidance CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
+2. `Copy-Item .env.example .env`, then put your MySQL password in `.env` (never commit `.env`).
+3. `python scripts\load_onet_to_mysql.py` creates the 13 tables from `database/schema.sql`, fills them
+   from O*NET and prints the row counts. It is safe to run again (no duplicates).
+4. `pytest -q -rs` checks that MySQL and the `.txt` files give identical recommendations.
+
 ## Run
 
 | What | How |
@@ -37,7 +46,8 @@ https://www.onetcenter.org/dl_files/database/db_31_0_text.zip and extract it int
 | Explore the data | open `notebooks/01_explore_onet.ipynb` |
 | Get recommendations | open `notebooks/02_baseline_demo.ipynb` and Run All |
 | Prototype | open `frontend/prototype/pathfinder.html` in a browser; load `docs/careers.json` (made by notebook 02's last cell) in the Data tab for real data |
-| Tests | `pip install -r requirements-dev.txt` then `pytest -q` |
+| Load O*NET into MySQL | `python scripts\load_onet_to_mysql.py` |
+| Tests | `pip install -r requirements-dev.txt` then `pytest -q -rs` (MySQL tests are skipped if MySQL is not running) |
 | Create the survey | paste `tools/create_career_survey.gs` into script.google.com and run it |
 
 ## How the baseline works

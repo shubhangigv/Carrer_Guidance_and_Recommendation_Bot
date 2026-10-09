@@ -29,7 +29,7 @@ give Windows PowerShell commands, and say how to run and verify it.
 |---|---|
 | Language | Python 3.13 (Windows, VS Code, `.venv`) |
 | Data / ML | pandas, NumPy, scikit-learn; later XGBoost, sentence-transformers |
-| Database | **MySQL + MySQL Workbench** (designed, NOT built yet) |
+| Database | **MySQL + MySQL Workbench**, SQLAlchemy + PyMySQL (`backend/db.py`, settings from `.env`) |
 | Backend | FastAPI (planned) |
 | Frontend | React (planned); a working single-file prototype exists |
 | Data source | O*NET 31.0 (Aug 2026, CC BY 4.0); later ESCO v1.2.1 and India's NCO-2015 via ISCO-08 codes |
@@ -48,8 +48,11 @@ scripts/inventory_onet.py        lists every O*NET file with rows and columns
 frontend/prototype/pathfinder.html  working browser prototype (engine ported to JavaScript)
 frontend/prototype/engine.js     the JavaScript engine on its own (same results as Python)
 tools/create_career_survey.gs    Google Apps Script that builds the 9-question student survey
-tests/test_baseline_recommender.py  pytest tests with a tiny fake O*NET folder
-database/  backend/              empty, next phases
+tests/test_baseline_recommender.py  pytest tests with a tiny fake O*NET folder (tests/fake_onet.py)
+tests/test_mysql_matches_files.py   files vs MySQL give identical results (skipped if MySQL is not running)
+database/schema.sql              the 13 MySQL tables (CREATE TABLE IF NOT EXISTS)
+backend/db.py                    get_engine() from .env, run_sql_file()
+scripts/load_onet_to_mysql.py    creates the tables and upserts O*NET into them (re-runnable)
 data/raw/onet/                   O*NET text files (not in Git; download separately)
 ```
 
@@ -84,7 +87,12 @@ Sanity results on real O*NET 31.0 (hand-made profiles, NOT accuracy):
 biology/research profile → Biochemists and Biophysicists 81, Bioinformatics Scientists 80, Medical Scientists 79;
 arts/communication profile → Talent Directors 90, Music Directors and Composers 89, Producers and Directors 88.
 
-## Database design (MySQL, 13 tables, from the ER diagram; not created yet)
+## Database (MySQL, 13 tables, from the ER diagram; built in `database/schema.sql`)
+
+- `load_from_mysql(engine)` in the engine returns the same dict as `load_onet()`; both go through `_pivot()`.
+- `career` holds every occupation in `Occupation Data.txt`; only careers with interest + skill + knowledge data are ranked.
+- Ratings are DECIMAL(5,2), the precision O*NET publishes; the loader warns if a value would be rounded.
+- Tested against MariaDB 10.11 with fake O*NET data; the real-data comparison test runs on the team's PC.
 
 | Table | Columns |
 |---|---|
@@ -104,8 +112,7 @@ arts/communication profile → Talent Directors 90, Music Directors and Composer
 
 ## Roadmap (next tasks, in order)
 
-1. **MySQL**: `database/schema.sql` for the 13 tables; a loader script that fills career, skill, interest,
-   knowledge and the three link tables from O*NET; make `load_onet()` able to read from MySQL (same results as from files).
+1. ~~MySQL~~ done; confirm on the real data: run the loader, then `pytest -q -rs` (expect 910 ranked careers).
 2. **FastAPI** in `backend/`: `POST /assessment`, `POST /recommend`, `GET /careers/{id}`; save recommendations; Swagger at `/docs`.
 3. **Frontend**: prototype calls the API; then React with the same screens.
 4. **Survey** (Google Form from `tools/create_career_survey.gs`, 1st–3rd year students): analysis notebook;
