@@ -1,6 +1,18 @@
+# Python
+.venv/
 __pycache__/
 *.pyc
-.venv/
-venv/
+.ipynb_checkpoints/
 .pytest_cache/
+
+# Secrets
 .env
+
+# Data (download O*NET separately; see README)
+data/raw/*
+!data/raw/onet/
+data/raw/onet/*
+!data/raw/onet/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+docs/careers.json

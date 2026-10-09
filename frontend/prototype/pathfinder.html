@@ -1,0 +1,943 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pathfinder Career Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap">
+<style>
+/* Layout: one app column (max 1120px) under a sticky top bar; screens swap in place. */
+:root {
+  --bg: #F4F5F8; --surface: #FFFFFF; --surface-2: #EEF0F5; --ink: #141B2D; --muted: #4D586A;
+  --line: #DDE1E8; --accent: #2B3FD1; --accent-ink: #FFFFFF; --accent-soft: #E7EAFE; --accent-strong: #1C2A99;
+  --gap: #B9480F; --gap-soft: #FCEDE2; --gap-ink: #8A330A; --warn-bg: #FFF4D6; --warn-ink: #6B4A00;
+  --shadow: 0 1px 2px rgba(20,27,45,.06), 0 8px 24px rgba(20,27,45,.06);
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "DM Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0F1320; --surface: #171C2B; --surface-2: #1F2536; --ink: #E8EBF3; --muted: #A3ACBD;
+  --line: #2C3346; --accent: #8C9BFF; --accent-ink: #0F1320; --accent-soft: #232B52; --accent-strong: #C3CAFF;
+  --gap: #F59E62; --gap-soft: #3A2618; --gap-ink: #FFC9A3; --warn-bg: #3A3014; --warn-ink: #F5D98C;
+  --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0F1320; --surface: #171C2B; --surface-2: #1F2536; --ink: #E8EBF3; --muted: #A3ACBD;
+  --line: #2C3346; --accent: #8C9BFF; --accent-ink: #0F1320; --accent-soft: #232B52; --accent-strong: #C3CAFF;
+  --gap: #F59E62; --gap-soft: #3A2618; --gap-ink: #FFC9A3; --warn-bg: #3A3014; --warn-ink: #F5D98C;
+  --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(30px, 5vw, 46px); letter-spacing: -0.02em; }
+h2 { font-size: 24px; }
+h3 { font-size: 18px; }
+p { margin: 0; }
+a { color: var(--accent); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+.eyebrow { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* top bar */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); border-bottom: 1px solid var(--line); }
+.top-in { max-width: 1120px; margin: 0 auto; padding: 10px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.brand { display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 6px 0; cursor: pointer; font-family: var(--font-display); font-weight: 700; font-size: 20px; }
+.brand svg { color: var(--accent); }
+.nav { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+.nav button { background: none; border: 0; border-radius: 10px; padding: 9px 12px; min-height: 40px; cursor: pointer; color: var(--muted); font-weight: 500; }
+.nav button:hover { background: var(--surface-2); color: var(--ink); }
+.nav button[aria-current="page"] { background: var(--accent-soft); color: var(--accent-strong); font-weight: 700; }
+.who { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+
+.banner { max-width: 1120px; margin: 12px auto 0; padding: 0 16px; }
+.banner-in { background: var(--warn-bg); color: var(--warn-ink); border-radius: 12px; padding: 10px 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 14px; }
+.banner-in.real { background: var(--accent-soft); color: var(--accent-strong); }
+
+main { max-width: 1120px; margin: 0 auto; padding: 24px 16px 72px; }
+.screen { display: flex; flex-direction: column; gap: 24px; }
+
+/* shared parts */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 18px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-weight: 500; text-decoration: none; color: var(--ink); }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.link { border: 0; background: none; color: var(--accent); padding-inline: 4px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.split { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.split > .side { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+.split > .main { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.chip { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 500; background: var(--surface-2); color: var(--ink); }
+.chip.good { background: var(--accent-soft); color: var(--accent-strong); }
+.chip.gap { background: var(--gap-soft); color: var(--gap-ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.bar { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-weight: 500; }
+.field input, .field select { min-height: 46px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.empty { text-align: center; padding: 48px 22px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+
+/* home */
+.hero { display: flex; flex-wrap: wrap; gap: 32px; align-items: center; padding-block: 24px; }
+.hero > div { flex: 1 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 18px; }
+.hero .lead { font-size: 19px; color: var(--muted); max-width: 34em; }
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; counter-reset: s; }
+.steps li { display: flex; gap: 14px; align-items: flex-start; }
+.steps li::before { counter-increment: s; content: counter(s); flex: none; width: 34px; height: 34px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-weight: 700; font-family: var(--font-display); }
+.stat-row { display: flex; flex-wrap: wrap; gap: 28px; }
+.stat b { display: block; font-family: var(--font-display); font-size: 30px; }
+
+/* assessment */
+.stepper { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.stepper button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 14px; min-height: 40px; cursor: pointer; font-size: 14px; color: var(--muted); }
+.stepper button.done { color: var(--ink); }
+.stepper button[aria-current="step"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.qlist { display: flex; flex-direction: column; gap: 12px; }
+fieldset.rate { margin: 0; border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; background: var(--surface); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; }
+fieldset.rate.missing { border-color: var(--gap); }
+fieldset.rate legend { float: left; padding: 0; font-weight: 500; flex: 1 1 260px; min-width: 0; }
+.seg { display: flex; gap: 6px; flex-wrap: wrap; }
+.seg label { position: relative; min-width: 44px; height: 44px; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; display: grid; place-items: center; cursor: pointer; font-weight: 700; background: var(--surface); }
+.seg label:hover { border-color: var(--accent); }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg label.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.seg label:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+.scale-note { font-size: 13px; color: var(--muted); }
+.progress { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+.progress > span { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+.alert { color: var(--gap-ink); background: var(--gap-soft); padding: 10px 14px; border-radius: 10px; font-size: 14px; }
+
+/* results */
+.rec { display: flex; flex-wrap: wrap; gap: 18px; }
+.rank { flex: none; width: 44px; height: 44px; border-radius: 12px; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 20px; }
+.rec-body { flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.rec-side { flex: 0 1 200px; min-width: 170px; display: flex; flex-direction: column; gap: 10px; }
+.score { font-family: var(--font-display); font-weight: 700; font-size: 34px; color: var(--accent); line-height: 1; }
+.score small { font-size: 15px; color: var(--muted); font-weight: 500; }
+.parts { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: center; font-size: 13px; color: var(--muted); }
+.reasons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.reasons li { display: flex; gap: 8px; align-items: flex-start; font-size: 15px; }
+.reasons li svg { flex: none; margin-top: 3px; color: var(--accent); }
+.filters { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+.filters label { min-width: 0; max-width: 100%; flex-wrap: nowrap; }
+.filters select { flex: 1 1 auto; min-width: 0; max-width: 100%; min-height: 42px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); }
+.check { display: flex; gap: 10px; align-items: center; min-height: 44px; cursor: pointer; }
+.check input { width: 20px; height: 20px; accent-color: var(--accent); }
+
+/* career */
+.gapchart { display: flex; flex-direction: column; gap: 14px; }
+.gaprow { display: grid; grid-template-columns: minmax(130px, 220px) 1fr auto; gap: 14px; align-items: center; }
+.gaprow .chip { justify-self: start; }
+.track { position: relative; height: 16px; background: var(--surface-2); border-radius: 6px; }
+.track .you { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); border-radius: 6px; }
+.track .need { position: absolute; top: 0; bottom: 0; background: var(--gap-soft); border: 2px dashed var(--gap); border-left: 0; border-radius: 0 6px 6px 0; }
+.track .tick { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--ink); border-radius: 2px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); }
+.legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 6px; }
+
+/* roadmap */
+.road { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.road li { display: flex; gap: 16px; }
+.road .rail { display: flex; flex-direction: column; align-items: center; width: 32px; flex: none; }
+.road .dot { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-weight: 700; font-size: 14px; background: var(--surface); color: var(--muted); }
+.road li.done .dot { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.road .line { flex: 1; width: 2px; background: var(--line); min-height: 16px; }
+.road .step { flex: 1; min-width: 0; margin-bottom: 14px; }
+
+/* chat */
+.chat { display: flex; flex-direction: column; min-height: 520px; padding: 0; overflow: hidden; }
+.msgs { flex: 1; padding: 22px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; max-height: 60vh; }
+.msg { max-width: 85%; padding: 12px 16px; border-radius: 16px; white-space: pre-line; }
+.msg.user { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 4px; }
+.msg.bot { align-self: flex-start; background: var(--surface-2); border-bottom-left-radius: 4px; }
+.msg .src { display: block; margin-top: 8px; font-size: 12px; color: var(--muted); }
+.composer { border-top: 1px solid var(--line); padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+.composer form { display: flex; gap: 10px; }
+.composer input { flex: 1; min-width: 0; min-height: 48px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
+.sugg { display: flex; flex-wrap: wrap; gap: 6px; }
+.sugg button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; min-height: 36px; cursor: pointer; font-size: 14px; }
+
+pre.code { background: var(--surface-2); border-radius: 12px; padding: 14px; overflow-x: auto; font-family: var(--font-mono); font-size: 13px; line-height: 1.5; margin: 0; }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 20; }
+@media (max-width: 520px) { .gaprow { grid-template-columns: 1fr; gap: 6px; } .msg { max-width: 95%; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head><body style="margin:0">
+
+<header class="top">
+  <div class="top-in">
+    <button class="brand" type="button" data-go="home" aria-label="Pathfinder home">
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="16" cy="16" r="13"></circle><path d="M20.5 11.5 L17.8 17.8 L11.5 20.5 L14.2 14.2 Z"></path></svg>
+      Pathfinder
+    </button>
+    <nav class="nav" aria-label="Main">
+      <button type="button" data-go="assess">Assessment</button>
+      <button type="button" data-go="results">Matches</button>
+      <button type="button" data-go="roadmap">Roadmap</button>
+      <button type="button" data-go="chat">Assistant</button>
+      <button type="button" data-go="data">Data</button>
+    </nav>
+    <div class="who" id="who"></div>
+  </div>
+</header>
+<div class="banner" id="banner"></div>
+
+<main>
+  <!-- HOME -->
+  <section class="screen" id="v-home">
+    <div class="hero">
+      <div>
+        <p class="eyebrow">Final-year project prototype</p>
+        <h1>Find the career that fits you, in every field</h1>
+        <p class="lead">Rate your subjects, interests and skills. Pathfinder compares you with every career in its database, explains each match from your own answers, and shows what to learn next.</p>
+        <div class="row">
+          <button class="btn primary" type="button" data-go="login">Start the assessment</button>
+          <button class="btn" type="button" id="tryExample">See an example result</button>
+        </div>
+        <div class="stat-row" id="homeStats"></div>
+      </div>
+      <div class="card" style="flex: 1 1 340px">
+        <h2 style="margin-bottom: 16px">How it works</h2>
+        <ol class="steps">
+          <li><div><b>Create your profile</b><p class="muted small">Education, degree and year.</p></div></li>
+          <li><div><b>Rate yourself</b><p class="muted small">Subjects, 18 interest statements, 16 skills and what matters to you in a job.</p></div></li>
+          <li><div><b>See your matches</b><p class="muted small">Each career gets a Profile Match Score out of 100 and the reasons behind it.</p></div></li>
+          <li><div><b>Close the gaps</b><p class="muted small">Pick a goal and follow a roadmap built from your skill gaps.</p></div></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOGIN -->
+  <section class="screen" id="v-login" hidden>
+    <div class="card" style="max-width: 560px; width: 100%; margin: 0 auto">
+      <h1 style="font-size: 32px">Create your profile</h1>
+      <p class="muted" style="margin-top: 6px">This prototype keeps your details in this browser only. Nothing is sent anywhere.</p>
+      <form id="loginForm" style="display: flex; flex-direction: column; gap: 16px; margin-top: 22px">
+        <div class="field"><label for="f-name">Name</label><input id="f-name" required autocomplete="name"></div>
+        <div class="field"><label for="f-email">Email</label><input id="f-email" type="email" autocomplete="email"></div>
+        <div class="grid2">
+          <div class="field"><label for="f-level">Education level</label>
+            <select id="f-level"><option>Class 12</option><option>Diploma</option><option selected>Undergraduate</option><option>Postgraduate</option></select></div>
+          <div class="field"><label for="f-year">Year of study</label>
+            <select id="f-year"><option>1st year</option><option>2nd year</option><option selected>3rd year</option><option>4th year</option><option>Final year</option></select></div>
+        </div>
+        <div class="field"><label for="f-degree">Degree or stream</label><input id="f-degree" placeholder="e.g. B.Sc. Biotechnology"></div>
+        <button class="btn primary" type="submit">Continue to the assessment</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ASSESSMENT -->
+  <section class="screen" id="v-assess" hidden>
+    <div class="row" style="justify-content: space-between">
+      <div><p class="eyebrow" id="stepLabel"></p><h1 id="stepTitle" style="font-size: 34px"></h1><p class="muted" id="stepHelp" style="margin-top: 6px"></p></div>
+      <button class="btn link" type="button" id="fillExample">Fill with example answers</button>
+    </div>
+    <ol class="stepper" id="stepper"></ol>
+    <div class="progress" aria-hidden="true"><span id="assessProgress"></span></div>
+    <div class="qlist" id="questions"></div>
+    <p class="alert" id="assessAlert" hidden></p>
+    <div class="row" style="justify-content: space-between">
+      <button class="btn" type="button" id="prevStep">Back</button>
+      <span class="muted small" id="answeredCount"></span>
+      <button class="btn primary" type="button" id="nextStep">Next</button>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section class="screen" id="v-results" hidden></section>
+  <!-- CAREER -->
+  <section class="screen" id="v-career" hidden></section>
+  <!-- ROADMAP -->
+  <section class="screen" id="v-roadmap" hidden></section>
+
+  <!-- CHAT -->
+  <section class="screen" id="v-chat" hidden>
+    <div><h1 style="font-size: 34px">Career assistant</h1>
+      <p class="muted" style="margin-top: 6px">Answers come only from your results and the loaded career data. A RAG + LLM assistant replaces this in the next phase.</p></div>
+    <div class="card chat">
+      <div class="msgs" id="msgs" aria-live="polite"></div>
+      <div class="composer">
+        <div class="sugg" id="sugg"></div>
+        <form id="chatForm"><input id="chatInput" placeholder="Ask about your matches, skill gaps or a career" autocomplete="off" aria-label="Ask a question">
+          <button class="btn primary" type="submit">Send</button></form>
+      </div>
+    </div>
+  </section>
+
+  <!-- DATA -->
+  <section class="screen" id="v-data" hidden>
+    <div><h1 style="font-size: 34px">Career data</h1><p class="muted" id="dataStatus" style="margin-top: 6px"></p></div>
+    <div class="split">
+      <div class="main">
+        <div class="card" style="display: flex; flex-direction: column; gap: 14px">
+          <h2>Load your O*NET export</h2>
+          <p>Run the export cell in <b>02_baseline_demo.ipynb</b>. It writes <b>docs\careers.json</b>. Choose that file here and every score in the app is computed from real O*NET 31.0 ratings.</p>
+          <div class="field"><label for="dataFile">careers.json</label><input id="dataFile" type="file" accept=".json,application/json"></div>
+          <p class="alert" id="dataError" hidden></p>
+          <div class="row"><button class="btn" type="button" id="resetData">Use example data instead</button></div>
+        </div>
+        <div class="card" style="display: flex; flex-direction: column; gap: 12px">
+          <div class="row" style="justify-content: space-between"><h2>Notebook export cell</h2><button class="btn" type="button" id="copyCode">Copy code</button></div>
+          <pre class="code" id="exportCode"></pre>
+        </div>
+      </div>
+      <div class="side">
+        <div class="card" style="display: flex; flex-direction: column; gap: 10px">
+          <h3>How the score works</h3>
+          <p class="small muted">For each career, three parts are compared with your answers using profile correlation (do your strongest areas match what the career rates most important?).</p>
+          <p class="small"><b>Skills</b> 30 · <b>Interests</b> 25 · <b>Subjects</b> 15, rescaled to 100. Work style, preferences and job-market data join the score in the next phase.</p>
+          <p class="small muted">Skill gaps compare O*NET's required level (0–7) with your self-rating mapped onto the same scale.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast" role="status" hidden></div>
+<script>
+/* Pathfinder recommendation engine (browser port of ml/baseline_recommender.py).
+   Pure functions only: no DOM access, so it can be tested on its own. */
+const RIASEC = ["Realistic", "Investigative", "Artistic", "Social", "Enterprising", "Conventional"];
+const WEIGHTS = { skills: 0.30, interests: 0.25, academic: 0.15 };
+const SKILL_MAP = {
+  "Mathematics": ["Mathematics"],
+  "Programming": ["Programming"],
+  "Problem Solving": ["Complex Problem Solving"],
+  "Logical Reasoning": ["Critical Thinking"],
+  "Critical Thinking": ["Critical Thinking"],
+  "Research": ["Science", "Active Learning"],
+  "Communication": ["Speaking", "Active Listening"],
+  "Writing": ["Writing"],
+  "Public Speaking": ["Speaking"],
+  "Leadership": ["Coordination", "Management of Personnel Resources"],
+  "Teamwork": ["Social Perceptiveness", "Coordination"],
+  "Time Management": ["Time Management"],
+  "Project Management": ["Coordination", "Time Management", "Management of Material Resources"],
+  "Financial/Business Skills": ["Management of Financial Resources", "Negotiation", "Persuasion"],
+  "Teaching": ["Instructing", "Learning Strategies"],
+  "Technical/Practical Skills": ["Installation", "Equipment Maintenance", "Troubleshooting",
+    "Repairing", "Operation and Control", "Equipment Selection"]
+};
+const SUBJECT_MAP = {
+  "Mathematics": ["Mathematics"],
+  "Physics": ["Physics"],
+  "Chemistry": ["Chemistry"],
+  "Biology": ["Biology"],
+  "Computer Science": ["Computers and Electronics"],
+  "Economics": ["Economics and Accounting"],
+  "Commerce/Accounting": ["Economics and Accounting", "Administration and Management"],
+  "Languages": ["English Language", "Foreign Language"],
+  "Social Sciences": ["Sociology and Anthropology", "Psychology", "History and Archeology", "Geography", "Law and Government"],
+  "Arts/Design": ["Fine Arts", "Design"]
+};
+
+function mean(a) { return a.reduce((x, y) => x + y, 0) / a.length; }
+function isNum(v) { return typeof v === "number" && !isNaN(v); }
+
+/* Questionnaire ratings -> values keyed by O*NET element name */
+function studentVector(ratings, map) {
+  const c = {};
+  for (const [item, v] of Object.entries(ratings || {})) {
+    for (const e of (map[item] || [])) (c[e] = c[e] || []).push(Number(v));
+  }
+  const out = {};
+  for (const k in c) out[k] = mean(c[k]);
+  return out;
+}
+
+/* Pearson correlation of profile shapes, rescaled from [-1,1] to [0,1] */
+function similarity(stu, names, values) {
+  const idx = [];
+  for (let i = 0; i < names.length; i++) if (stu[names[i]] !== undefined) idx.push(i);
+  if (idx.length < 2) return 0.5;
+  const raw = idx.map(i => values[i]);
+  const known = raw.filter(isNum);
+  if (!known.length) return 0.5;
+  const fill = mean(known);
+  const t = raw.map(v => (isNum(v) ? v : fill));
+  const s = idx.map(i => stu[names[i]]);
+  const sm = mean(s), tm = mean(t);
+  let num = 0, ds = 0, dt = 0;
+  for (let k = 0; k < s.length; k++) {
+    const a = s[k] - sm, b = t[k] - tm;
+    num += a * b; ds += a * a; dt += b * b;
+  }
+  const den = Math.sqrt(ds) * Math.sqrt(dt);
+  return ((den > 0 ? num / den : 0) + 1) / 2;
+}
+
+function interestProfile(student) {
+  const p = {};
+  for (const t of RIASEC) p[t] = Number(student.interests[t]);
+  return p;
+}
+
+/* Rank every career. Returns [{career, score, interests, skills, academic}] best first */
+function recommend(student, data, opts) {
+  const minZone = opts && opts.minJobZone;
+  const stuInt = interestProfile(student);
+  const stuSkill = studentVector(student.skills, SKILL_MAP);
+  const stuKnow = studentVector(student.subjects, SUBJECT_MAP);
+  const total = WEIGHTS.skills + WEIGHTS.interests + WEIGHTS.academic;
+  const rows = [];
+  for (const c of data.careers) {
+    if (minZone && isNum(c.job_zone) && c.job_zone < minZone) continue;
+    const interests = similarity(stuInt, data.riasec, c.interests);
+    const skills = similarity(stuSkill, data.skills, c.skill_im);
+    const academic = similarity(stuKnow, data.knowledge, c.know_im);
+    const score = (skills * WEIGHTS.skills + interests * WEIGHTS.interests + academic * WEIGHTS.academic) / total * 100;
+    rows.push({ career: c, score, interests, skills, academic });
+  }
+  rows.sort((a, b) => b.score - a.score);
+  return rows;
+}
+
+function valueOf(data, c, list, key, name) {
+  const i = data[list].indexOf(name);
+  return i < 0 ? null : c[key][i];
+}
+
+/* Reasons (from the student's own answers) and skill gaps for one career */
+function explain(student, data, c) {
+  const reasons = [];
+  const occ = data.riasec.map((n, i) => [n, c.interests[i]]).filter(x => isNum(x[1])).sort((a, b) => b[1] - a[1]).map(x => x[0]);
+  const stu = Object.entries(interestProfile(student)).sort((a, b) => b[1] - a[1]);
+  for (const [name, v] of stu.slice(0, 2)) {
+    if (occ.slice(0, 3).includes(name) && v >= 3.5)
+      reasons.push({ kind: "interest", text: `High ${name} interest (${fmt(v)}/5), a top interest type for this career` });
+  }
+  const imp = n => valueOf(data, c, "skills", "skill_im", n);
+  let cands = [];
+  for (const [item, r] of Object.entries(student.skills)) {
+    const hits = (SKILL_MAP[item] || []).filter(e => (imp(e) || 0) >= 3.5);
+    if (r >= 4 && hits.length) cands.push([Math.max(...hits.map(imp)), item, r, hits]);
+  }
+  cands.sort((a, b) => b[0] - a[0]);
+  const used = new Set();
+  let nSkill = 0;
+  for (const [, item, r, hits0] of cands) {
+    const hits = hits0.filter(e => !used.has(e));
+    if (hits.length && nSkill < 2) {
+      hits.forEach(e => used.add(e)); nSkill++;
+      reasons.push({ kind: "skill", text: `Your ${item} (${r}/5) is important here (${hits.join(", ")})` });
+    }
+  }
+  const kimp = n => valueOf(data, c, "knowledge", "know_im", n);
+  cands = [];
+  for (const [subj, r] of Object.entries(student.subjects)) {
+    const hits = (SUBJECT_MAP[subj] || []).filter(e => (kimp(e) || 0) >= 3.5);
+    if (r >= 4 && hits.length) cands.push([Math.max(...hits.map(kimp)), subj, r, hits]);
+  }
+  cands.sort((a, b) => b[0] - a[0]);
+  for (const [, subj, r, hits] of cands.slice(0, 2))
+    reasons.push({ kind: "subject", text: `${subj} (${r}/5): this career uses ${hits.join(", ")} knowledge` });
+  return { reasons, gaps: skillGaps(student, data, c) };
+}
+
+/* Required level (O*NET LV, 0-7) vs self-rating mapped 1-5 -> 0-7 (rough, to be calibrated) */
+function skillRows(student, data, c) {
+  const stu = studentVector(student.skills, SKILL_MAP);
+  const rows = [];
+  for (const [el, r] of Object.entries(stu)) {
+    const im = valueOf(data, c, "skills", "skill_im", el);
+    const lv = valueOf(data, c, "skills", "skill_lv", el);
+    if (!isNum(im) || !isNum(lv)) continue;
+    const your = (r - 1) / 4 * 7;
+    rows.push({ skill: el, importance: im, required: lv, your, gap: lv - your });
+  }
+  return rows.sort((a, b) => b.importance - a.importance);
+}
+
+function skillGaps(student, data, c) {
+  return skillRows(student, data, c)
+    .filter(r => r.importance >= 3 && r.gap > 0.5)
+    .map(r => Object.assign({}, r, { priority: r.importance * r.gap }))
+    .sort((a, b) => b.priority - a.priority);
+}
+
+function fmt(v) { return (Math.round(v * 10) / 10).toString(); }
+
+if (typeof module !== "undefined") module.exports = { RIASEC, SKILL_MAP, SUBJECT_MAP, recommend, explain, skillGaps, skillRows, similarity, studentVector };
+</script>
+<script>
+/* ---------- example data (illustrative, NOT O*NET values) ---------- */
+const SKILL_NAMES = ["Reading Comprehension","Active Listening","Writing","Speaking","Mathematics","Science","Critical Thinking","Active Learning","Learning Strategies","Monitoring","Social Perceptiveness","Coordination","Persuasion","Negotiation","Instructing","Service Orientation","Complex Problem Solving","Operations Analysis","Technology Design","Equipment Selection","Installation","Programming","Operations Monitoring","Operation and Control","Equipment Maintenance","Troubleshooting","Repairing","Quality Control Analysis","Judgment and Decision Making","Systems Analysis","Systems Evaluation","Time Management","Management of Financial Resources","Management of Material Resources","Management of Personnel Resources"];
+const KNOW_NAMES = ["Administration and Management","Administrative","Economics and Accounting","Sales and Marketing","Customer and Personal Service","Personnel and Human Resources","Production and Processing","Food Production","Computers and Electronics","Engineering and Technology","Design","Building and Construction","Mechanical","Mathematics","Physics","Chemistry","Biology","Psychology","Sociology and Anthropology","Geography","Medicine and Dentistry","Therapy and Counseling","Education and Training","English Language","Foreign Language","Fine Arts","History and Archeology","Philosophy and Theology","Public Safety and Security","Law and Government","Telecommunications","Communications and Media","Transportation"];
+const EXAMPLE_SPECS = [
+  ["Data Scientists","Computer & Mathematical",4,[2.0,6.6,3.0,2.0,2.6,4.6],["Programming","Mathematics","Critical Thinking","Complex Problem Solving","Systems Analysis","Active Learning","Reading Comprehension","Writing"],["Mathematics","Computers and Electronics","English Language"]],
+  ["Bioinformatics Scientists","Life, Physical & Social Science",5,[2.3,6.8,2.6,2.2,2.1,4.0],["Science","Programming","Critical Thinking","Reading Comprehension","Writing","Mathematics","Active Learning"],["Biology","Computers and Electronics","Mathematics","Chemistry"]],
+  ["Software Developers","Computer & Mathematical",4,[3.0,6.4,3.4,1.8,3.0,4.1],["Programming","Complex Problem Solving","Critical Thinking","Systems Analysis","Technology Design","Troubleshooting"],["Computers and Electronics","Mathematics","Engineering and Technology","Design"]],
+  ["Registered Nurses","Healthcare Practitioners",3,[3.5,4.5,1.8,6.6,2.5,3.5],["Social Perceptiveness","Active Listening","Service Orientation","Monitoring","Speaking","Coordination","Critical Thinking"],["Medicine and Dentistry","Psychology","Customer and Personal Service","Biology","Therapy and Counseling"]],
+  ["Family Medicine Physicians","Healthcare Practitioners",5,[3.4,6.4,1.9,5.6,2.8,2.6],["Critical Thinking","Active Listening","Science","Judgment and Decision Making","Reading Comprehension","Social Perceptiveness"],["Medicine and Dentistry","Biology","Chemistry","Psychology"]],
+  ["Civil Engineers","Architecture & Engineering",4,[5.0,5.6,2.4,1.9,3.4,4.4],["Mathematics","Complex Problem Solving","Judgment and Decision Making","Critical Thinking","Operations Analysis","Technology Design"],["Engineering and Technology","Building and Construction","Design","Mathematics","Physics"]],
+  ["Mechanical Engineers","Architecture & Engineering",4,[5.4,6.0,2.6,1.6,2.8,3.8],["Mathematics","Technology Design","Complex Problem Solving","Science","Operations Analysis","Equipment Selection"],["Engineering and Technology","Mechanical","Physics","Design","Mathematics"]],
+  ["Accountants and Auditors","Business & Finance",4,[1.4,4.0,1.4,2.4,4.0,6.8],["Mathematics","Critical Thinking","Reading Comprehension","Active Listening","Writing","Management of Financial Resources"],["Economics and Accounting","Mathematics","English Language","Law and Government","Administrative"]],
+  ["Financial Analysts","Business & Finance",4,[1.5,5.6,1.5,1.8,4.8,6.2],["Mathematics","Critical Thinking","Judgment and Decision Making","Reading Comprehension","Management of Financial Resources","Systems Analysis"],["Economics and Accounting","Mathematics","Computers and Electronics"]],
+  ["Marketing Managers","Management",4,[1.4,3.2,4.4,3.0,6.8,3.2],["Persuasion","Speaking","Coordination","Judgment and Decision Making","Writing","Management of Personnel Resources"],["Sales and Marketing","Communications and Media","Customer and Personal Service","Administration and Management"]],
+  ["Secondary School Teachers","Education & Library",4,[1.6,3.6,3.2,6.6,4.0,3.0],["Instructing","Speaking","Learning Strategies","Social Perceptiveness","Active Listening","Monitoring"],["Education and Training","English Language","Psychology"]],
+  ["Clinical and Counseling Psychologists","Life, Physical & Social Science",5,[1.3,6.0,3.2,6.8,2.4,2.6],["Social Perceptiveness","Active Listening","Speaking","Critical Thinking","Writing","Reading Comprehension"],["Psychology","Therapy and Counseling","Sociology and Anthropology","English Language"]],
+  ["Graphic Designers","Arts, Design, Entertainment, Sports & Media",3,[2.4,2.6,6.8,1.8,3.6,3.2],["Active Listening","Speaking","Critical Thinking","Time Management","Coordination","Technology Design"],["Design","Fine Arts","Communications and Media","Computers and Electronics"]],
+  ["Writers and Authors","Arts, Design, Entertainment, Sports & Media",4,[1.2,4.0,7.0,2.2,3.2,2.4],["Writing","Reading Comprehension","Critical Thinking","Active Learning","Active Listening"],["English Language","Communications and Media","History and Archeology","Fine Arts"]],
+  ["Lawyers","Legal",5,[1.2,4.6,2.8,4.0,6.4,4.2],["Speaking","Persuasion","Negotiation","Critical Thinking","Reading Comprehension","Writing","Active Listening"],["Law and Government","English Language","Customer and Personal Service"]],
+  ["Environmental Scientists and Specialists","Life, Physical & Social Science",4,[4.6,6.6,2.0,2.4,2.4,4.2],["Science","Critical Thinking","Reading Comprehension","Writing","Complex Problem Solving","Mathematics"],["Biology","Chemistry","Geography","Law and Government","Mathematics"]],
+  ["Agricultural Engineers","Architecture & Engineering",4,[5.6,5.8,2.2,2.4,3.0,3.4],["Mathematics","Technology Design","Science","Complex Problem Solving","Equipment Selection"],["Engineering and Technology","Food Production","Biology","Mechanical","Physics"]],
+  ["Electricians","Construction & Extraction",3,[6.8,3.8,1.4,1.8,2.6,3.6],["Troubleshooting","Installation","Repairing","Equipment Maintenance","Critical Thinking","Operation and Control"],["Building and Construction","Mechanical","Mathematics","Physics","Public Safety and Security"]],
+  ["Chefs and Head Cooks","Food Preparation & Serving",3,[5.6,2.2,4.4,2.6,5.0,3.4],["Coordination","Management of Personnel Resources","Monitoring","Time Management","Judgment and Decision Making"],["Food Production","Customer and Personal Service","Administration and Management"]],
+  ["Public Relations Specialists","Arts, Design, Entertainment, Sports & Media",4,[1.2,2.6,4.8,4.4,6.4,3.0],["Speaking","Writing","Persuasion","Active Listening","Social Perceptiveness","Coordination"],["Communications and Media","English Language","Sales and Marketing","Customer and Personal Service"]],
+  ["Social Workers","Community & Social Service",4,[1.4,3.4,2.4,7.0,3.0,3.2],["Social Perceptiveness","Active Listening","Service Orientation","Speaking","Coordination","Critical Thinking"],["Psychology","Therapy and Counseling","Sociology and Anthropology","Customer and Personal Service"]],
+  ["Architects","Architecture & Engineering",4,[4.4,4.6,6.0,2.0,4.0,3.6],["Complex Problem Solving","Critical Thinking","Speaking","Coordination","Mathematics","Judgment and Decision Making"],["Design","Building and Construction","Engineering and Technology","Fine Arts","Mathematics"]],
+  ["Microbiologists","Life, Physical & Social Science",5,[3.6,6.8,2.2,2.0,2.0,3.8],["Science","Reading Comprehension","Critical Thinking","Writing","Active Learning","Mathematics"],["Biology","Chemistry","Mathematics","English Language"]],
+  ["Management Analysts","Business & Finance",4,[1.4,5.0,2.4,3.4,6.0,5.0],["Critical Thinking","Complex Problem Solving","Speaking","Active Listening","Judgment and Decision Making","Systems Analysis"],["Administration and Management","Economics and Accounting","Customer and Personal Service","English Language"]]
+];
+function buildExample() {
+  const careers = EXAMPLE_SPECS.map(([title, domain, jz, interests, skills, know], ci) => {
+    const wobble = i => (((ci + 3) * (i + 7)) % 9) / 20;          // small fixed variation, avoids ties
+    const skill_im = SKILL_NAMES.map((n, i) => {
+      const k = skills.indexOf(n);
+      return +(k < 0 ? 1.8 + wobble(i) : 4.6 - k * 0.12).toFixed(2);
+    });
+    const skill_lv = skill_im.map(v => +Math.min(7, v * 1.25).toFixed(2));
+    const know_im = KNOW_NAMES.map((n, i) => {
+      const k = know.indexOf(n);
+      return +(k < 0 ? 1.6 + wobble(i) : 4.5 - k * 0.15).toFixed(2);
+    });
+    return { code: "EX-" + String(ci + 1).padStart(2, "0"), title, domain, job_zone: jz, interests, skill_im, skill_lv, know_im,
+      description: "Example profile for the demo. Load the O*NET export to see the official description and ratings." };
+  });
+  return { source: "example", riasec: RIASEC, skills: SKILL_NAMES, knowledge: KNOW_NAMES, careers };
+}
+
+/* ---------- questionnaire ---------- */
+const SUBJECTS = Object.keys(SUBJECT_MAP);
+const SKILLS = Object.keys(SKILL_MAP);
+const INTEREST_ITEMS = [
+  ["I enjoy solving difficult mathematical problems.", "Investigative"],
+  ["I enjoy working with machines or physical equipment.", "Realistic"],
+  ["I enjoy designing things.", "Artistic"],
+  ["I enjoy helping people solve their problems.", "Social"],
+  ["I enjoy taking leadership roles.", "Enterprising"],
+  ["I like organizing information.", "Conventional"],
+  ["I like finding out why something works.", "Investigative"],
+  ["I like building or repairing things.", "Realistic"],
+  ["I enjoy writing stories or creative content.", "Artistic"],
+  ["I enjoy teaching others.", "Social"],
+  ["I enjoy convincing or influencing others.", "Enterprising"],
+  ["I prefer structured tasks.", "Conventional"],
+  ["I enjoy analysing data and information.", "Investigative"],
+  ["I would enjoy working in a laboratory, workshop or field setting.", "Realistic"],
+  ["I prefer jobs that allow creative freedom.", "Artistic"],
+  ["I would like a career where I can directly help people.", "Social"],
+  ["I am interested in starting a business.", "Enterprising"],
+  ["I enjoy working with numbers and records.", "Conventional"]
+];
+const PREFS = ["High salary", "Job stability", "Work-life balance", "Social impact", "Research opportunities", "Creative freedom"];
+const STEPS = [
+  { key: "subjects", label: "Subjects", title: "Your subjects", help: "How much do you enjoy each subject and how well do you do in it?", items: SUBJECTS, scale: ["Low", "High"] },
+  { key: "interestItems", label: "Interests", title: "What do you enjoy?", help: "Rate how much you agree. Think about what you like doing, not what you are best at.", items: INTEREST_ITEMS.map(x => x[0]), scale: ["Strongly disagree", "Strongly agree"] },
+  { key: "skills", label: "Skills", title: "Your current skills", help: "Rate your current ability, not your interest. 1 = beginner, 5 = very advanced.", items: SKILLS, scale: ["Beginner", "Very advanced"] },
+  { key: "prefs", label: "Preferences", title: "What matters to you", help: "How important is each factor? Saved with your profile; it joins the score in the next phase.", items: PREFS, scale: ["Not important", "Very important"] }
+];
+const EXAMPLE_ANSWERS = {
+  subjects: { "Mathematics": 3, "Physics": 3, "Chemistry": 4, "Biology": 5, "Computer Science": 4, "Economics": 2, "Commerce/Accounting": 1, "Languages": 3, "Social Sciences": 2, "Arts/Design": 3 },
+  interestItems: [5, 3, 3, 3, 2, 3, 5, 3, 4, 3, 2, 3, 4, 2, 3, 4, 2, 3],
+  skills: { "Mathematics": 3, "Programming": 3, "Problem Solving": 4, "Logical Reasoning": 4, "Critical Thinking": 4, "Research": 5, "Communication": 3, "Writing": 4, "Public Speaking": 2, "Leadership": 2, "Teamwork": 3, "Time Management": 3, "Project Management": 2, "Financial/Business Skills": 1, "Teaching": 3, "Technical/Practical Skills": 3 },
+  prefs: { "High salary": 3, "Job stability": 4, "Work-life balance": 4, "Social impact": 4, "Research opportunities": 5, "Creative freedom": 3 }
+};
+
+/* ---------- state ---------- */
+const STORE_KEY = "pathfinder-state-v1", DATA_KEY = "pathfinder-data-v1";
+let state = { user: null, answers: { subjects: {}, interestItems: [], skills: {}, prefs: {} }, step: 0, goal: null, done: {}, hideLow: true, domain: "All", selected: null, chat: [] };
+let data = null, results = [];
+function load(key) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* storage unavailable */ } }
+function saveData() { try { if (data.source === "example") localStorage.removeItem(DATA_KEY); else localStorage.setItem(DATA_KEY, JSON.stringify(data)); } catch (e) { toast("Loaded, but this browser could not keep the file. Load it again next time."); } }
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const CHECK = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5 L8 14.5 L16 6"></path></svg>';
+const ZONES = { 1: "Little or no preparation", 2: "Some preparation", 3: "Medium preparation", 4: "Considerable preparation", 5: "Extensive preparation" };
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2600); }
+
+function student() {
+  const a = state.answers, interests = {};
+  for (const t of RIASEC) {
+    const vals = INTEREST_ITEMS.map((x, i) => x[1] === t ? a.interestItems[i] : null).filter(v => v);
+    interests[t] = vals.length ? vals.reduce((p, q) => p + q, 0) / vals.length : 3;
+  }
+  return { interests, skills: a.skills, subjects: a.subjects };
+}
+function stepAnswers(i) {
+  const s = STEPS[i], a = state.answers[s.key];
+  return s.items.map((item, k) => Array.isArray(a) ? a[k] : a[item]);
+}
+function complete() { return [0, 1, 2].every(i => stepAnswers(i).every(v => v)); }
+function compute() { results = complete() ? recommend(student(), data, { minJobZone: state.hideLow ? 3 : null }) : []; }
+function byCode(code) { return data.careers.find(c => c.code === code); }
+function resultFor(code) { return results.find(r => r.career.code === code); }
+
+/* ---------- navigation ---------- */
+const VIEWS = ["home", "login", "assess", "results", "career", "roadmap", "chat", "data"];
+function go(view) {
+  if (view === "assess" && !state.user) view = "login";
+  for (const v of VIEWS) $("v-" + v).hidden = v !== view;
+  document.querySelectorAll(".nav button").forEach(b => b.setAttribute("aria-current", b.dataset.go === view || (view === "career" && b.dataset.go === "results") ? "page" : "false"));
+  ({ home: renderHome, assess: renderAssess, results: renderResults, career: renderCareer, roadmap: renderRoadmap, chat: renderChat, data: renderData }[view] || (() => {}))();
+  window.scrollTo(0, 0);
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) go(b.dataset.go); });
+
+function renderChrome() {
+  $("who").innerHTML = state.user
+    ? `<span>${esc(state.user.name)}</span><span class="avatar" aria-hidden="true">${esc(initials(state.user.name))}</span>`
+    : `<button class="btn" type="button" data-go="login">Sign up</button>`;
+  $("banner").innerHTML = data.source === "example"
+    ? `<div class="banner-in"><b>Example data.</b><span>These ${data.careers.length} career profiles are illustrative, not O*NET ratings.</span><button class="btn link" type="button" data-go="data">Load your O*NET export</button></div>`
+    : `<div class="banner-in real"><b>${esc(data.source)}</b><span>${data.careers.length} careers loaded from your export.</span></div>`;
+}
+function initials(n) { return n.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase(); }
+
+/* ---------- home ---------- */
+function renderHome() {
+  const domains = new Set(data.careers.map(c => c.domain)).size;
+  $("homeStats").innerHTML = `<div class="stat"><b class="num">${data.careers.length}</b><span class="muted small">careers ${data.source === "example" ? "in the example set" : "ranked"}</span></div>
+    <div class="stat"><b class="num">${domains}</b><span class="muted small">career fields</span></div>
+    <div class="stat"><b class="num">3</b><span class="muted small">parts in every score</span></div>`;
+}
+$("tryExample").addEventListener("click", () => {
+  if (!state.user) state.user = { name: "Ananya S.", email: "", level: "Undergraduate", year: "3rd year", degree: "B.Sc. Biotechnology (example)" };
+  state.answers = JSON.parse(JSON.stringify(EXAMPLE_ANSWERS));
+  compute(); state.selected = null; save(); renderChrome(); go("results");
+});
+
+/* ---------- login ---------- */
+$("loginForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const name = $("f-name").value.trim();
+  if (!name) { $("f-name").focus(); return; }
+  state.user = { name, email: $("f-email").value.trim(), level: $("f-level").value, year: $("f-year").value, degree: $("f-degree").value.trim() };
+  save(); renderChrome(); go("assess");
+});
+
+/* ---------- assessment ---------- */
+function renderAssess() {
+  const i = state.step, s = STEPS[i], vals = stepAnswers(i);
+  $("stepLabel").textContent = `Step ${i + 1} of ${STEPS.length}`;
+  $("stepTitle").textContent = s.title;
+  $("stepHelp").textContent = s.help;
+  $("stepper").innerHTML = STEPS.map((st, k) => `<li><button type="button" data-step="${k}" class="${stepAnswers(k).every(v => v) ? "done" : ""}" ${k === i ? 'aria-current="step"' : ""}>${k + 1}. ${st.label}</button></li>`).join("");
+  $("questions").innerHTML = s.items.map((item, k) => `
+    <fieldset class="rate" id="q-${i}-${k}"><legend>${esc(item)}</legend>
+      <div><div class="seg">${[1, 2, 3, 4, 5].map(v => `<label class="${vals[k] === v ? "on" : ""}"><input type="radio" name="q-${i}-${k}" value="${v}" ${vals[k] === v ? "checked" : ""} aria-label="${v}">${v}</label>`).join("")}</div>
+      <div class="row scale-note" style="justify-content: space-between; margin-top: 4px"><span>${s.scale[0]}</span><span>${s.scale[1]}</span></div></div>
+    </fieldset>`).join("");
+  updateAssessMeta();
+  $("prevStep").disabled = i === 0;
+  $("nextStep").textContent = i === STEPS.length - 1 ? "See my matches" : "Next";
+  $("assessAlert").hidden = true;
+}
+function updateAssessMeta() {
+  const vals = stepAnswers(state.step), n = vals.filter(v => v).length;
+  $("answeredCount").textContent = `${n} of ${vals.length} answered`;
+  const all = STEPS.reduce((t, s, k) => t + stepAnswers(k).filter(v => v).length, 0);
+  const total = STEPS.reduce((t, s) => t + s.items.length, 0);
+  $("assessProgress").style.width = (all / total * 100) + "%";
+}
+$("questions").addEventListener("change", e => {
+  const inp = e.target; if (inp.type !== "radio") return;
+  const [, si, k] = inp.name.split("-").map(Number), s = STEPS[si], v = Number(inp.value);
+  if (Array.isArray(state.answers[s.key])) state.answers[s.key][k] = v; else state.answers[s.key][s.items[k]] = v;
+  inp.closest(".seg").querySelectorAll("label").forEach(l => l.classList.toggle("on", l.contains(inp)));
+  inp.closest("fieldset").classList.remove("missing");
+  save(); updateAssessMeta();
+});
+$("stepper").addEventListener("click", e => { const b = e.target.closest("[data-step]"); if (b) { state.step = Number(b.dataset.step); renderAssess(); } });
+$("prevStep").addEventListener("click", () => { if (state.step > 0) { state.step--; renderAssess(); window.scrollTo(0, 0); } });
+$("nextStep").addEventListener("click", () => {
+  const vals = stepAnswers(state.step), missing = vals.map((v, k) => v ? -1 : k).filter(k => k >= 0);
+  if (state.step < 3 && missing.length) {
+    missing.forEach(k => $(`q-${state.step}-${k}`).classList.add("missing"));
+    $("assessAlert").textContent = `Answer the ${missing.length} highlighted question${missing.length > 1 ? "s" : ""} to continue.`;
+    $("assessAlert").hidden = false; $(`q-${state.step}-${missing[0]}`).scrollIntoView({ block: "center" });
+    return;
+  }
+  if (state.step < STEPS.length - 1) { state.step++; save(); renderAssess(); window.scrollTo(0, 0); return; }
+  if (!complete()) { const k = [0, 1, 2].find(i => !stepAnswers(i).every(v => v)); state.step = k; renderAssess(); $("assessAlert").textContent = "Some answers in this step are still missing."; $("assessAlert").hidden = false; return; }
+  compute(); state.selected = null; save(); toast("Matches ready"); go("results");
+});
+$("fillExample").addEventListener("click", () => { state.answers = JSON.parse(JSON.stringify(EXAMPLE_ANSWERS)); save(); renderAssess(); toast("Example answers filled in"); });
+
+/* ---------- results ---------- */
+function partRows(r) {
+  return [["Interests", r.interests], ["Skills", r.skills], ["Subjects", r.academic]].map(([n, v]) =>
+    `<span>${n}</span><div class="bar"><span style="width:${Math.round(v * 100)}%"></span></div><span class="num">${Math.round(v * 100)}%</span>`).join("");
+}
+function renderResults() {
+  const el = $("v-results");
+  if (!complete()) {
+    el.innerHTML = `<div class="card empty"><h2>No matches yet</h2><p class="muted">Finish the assessment, or look at an example student's results.</p>
+      <div class="row" style="justify-content:center"><button class="btn primary" type="button" data-go="assess">Take the assessment</button><button class="btn" type="button" onclick="document.getElementById('tryExample').click()">See an example result</button></div></div>`;
+    return;
+  }
+  compute();
+  const domains = ["All", ...[...new Set(results.slice(0, 60).map(r => r.career.domain))].sort()];
+  if (!domains.includes(state.domain)) state.domain = "All";
+  const list = results.filter(r => state.domain === "All" || r.career.domain === state.domain).slice(0, 10);
+  const s = student(), riasec = Object.entries(s.interests).sort((a, b) => b[1] - a[1]);
+  const strong = Object.entries(state.answers.skills).filter(x => x[1] >= 4).sort((a, b) => b[1] - a[1]).map(x => x[0]);
+  el.innerHTML = `
+    <div class="row" style="justify-content: space-between; align-items: flex-end">
+      <div><h1 style="font-size: 36px">Your career matches</h1>
+      <p class="muted" style="margin-top: 6px">${esc(state.user ? state.user.name : "You")}${state.user && state.user.degree ? " · " + esc(state.user.degree) : ""} · ranked from ${results.length} careers</p></div>
+      <button class="btn" type="button" data-go="assess">Edit answers</button>
+    </div>
+    <div class="filters card" style="padding: 12px 18px">
+      <label class="check"><input type="checkbox" id="hideLow" ${state.hideLow ? "checked" : ""}> Hide jobs that need little or no preparation</label>
+      <label class="row" style="gap: 8px" for="domainSel">Field <select id="domainSel">${domains.map(d => `<option ${d === state.domain ? "selected" : ""}>${esc(d)}</option>`).join("")}</select></label>
+    </div>
+    <div class="split">
+      <aside class="side">
+        <div class="card"><h3>Your interest profile</h3><p class="muted small" style="margin: 4px 0 14px">Average rating out of 5</p>
+          <div style="display:flex;flex-direction:column;gap:10px">${riasec.map(([n, v]) => `<div><div class="row small" style="justify-content:space-between"><span>${n}</span><b class="num">${v.toFixed(1)}</b></div><div class="bar" style="margin-top:4px"><span style="width:${v / 5 * 100}%"></span></div></div>`).join("")}</div></div>
+        <div class="card"><h3>Strongest skills</h3><div class="chips" style="margin-top: 12px">${strong.length ? strong.map(x => `<span class="chip good">${esc(x)}</span>`).join("") : '<span class="muted small">No skill rated 4 or 5 yet.</span>'}</div></div>
+        <div class="card"><h3>About the score</h3><p class="small muted" style="margin-top: 8px">Profile Match Score: skills 30, interests 25, subjects 15, rescaled to 100. It shows how closely your profile matches the career, not a probability of success.</p></div>
+      </aside>
+      <div class="main">${list.map((r, k) => recCard(r, k + 1, s)).join("") || '<div class="card">No careers in this field.</div>'}</div>
+    </div>`;
+  $("hideLow").addEventListener("change", e => { state.hideLow = e.target.checked; save(); renderResults(); });
+  $("domainSel").addEventListener("change", e => { state.domain = e.target.value; save(); renderResults(); });
+}
+function recCard(r, rank, s) {
+  const ex = explain(s, data, r.career);
+  return `<article class="card rec">
+    <div class="rank">${rank}</div>
+    <div class="rec-body">
+      <p class="muted small">${esc(r.career.domain)}</p>
+      <h2 style="font-size: 22px">${esc(r.career.title)}</h2>
+      <ul class="reasons">${ex.reasons.slice(0, 2).map(x => `<li>${CHECK}<span>${esc(x.text)}</span></li>`).join("") || '<li class="muted small">Matched on overall profile similarity.</li>'}</ul>
+      ${ex.gaps.length ? `<div class="chips"><span class="small muted" style="align-self:center">To build:</span>${ex.gaps.slice(0, 3).map(g => `<span class="chip gap">${esc(g.skill)}</span>`).join("")}</div>` : ""}
+    </div>
+    <div class="rec-side">
+      <div><span class="score num">${Math.round(r.score)}<small>/100</small></span><p class="small muted">Profile match</p></div>
+      <div class="parts">${partRows(r)}</div>
+      <button class="btn primary" type="button" onclick="openCareer('${esc(r.career.code)}')">View details</button>
+    </div></article>`;
+}
+function openCareer(code) { state.selected = code; save(); go("career"); }
+
+/* ---------- career ---------- */
+function renderCareer() {
+  const el = $("v-career"), r = resultFor(state.selected) || (results[0] || null);
+  if (!r) { el.innerHTML = `<div class="card empty"><h2>Pick a career first</h2><button class="btn primary" type="button" data-go="results">Go to matches</button></div>`; return; }
+  const c = r.career, s = student(), ex = explain(s, data, c), rank = results.indexOf(r) + 1;
+  const rows = skillRows(s, data, c).filter(x => x.importance >= 3).slice(0, 8);
+  const know = data.knowledge.map((n, i) => [n, c.know_im[i]]).filter(x => x[1] != null).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const similar = results.filter(x => x.career.domain === c.domain && x !== r).slice(0, 4);
+  const pct = v => Math.max(0, Math.min(100, v / 7 * 100));
+  el.innerHTML = `
+    <button class="btn link" type="button" data-go="results" style="align-self:flex-start">← All matches</button>
+    <div class="card" style="display:flex;flex-wrap:wrap;gap:24px;justify-content:space-between">
+      <div style="flex:1 1 480px;min-width:0;display:flex;flex-direction:column;gap:10px">
+        <p class="muted small">${esc(c.domain)} · ${esc(c.code)}${c.job_zone ? " · Job Zone " + c.job_zone + ": " + ZONES[c.job_zone] : ""}</p>
+        <h1>${esc(c.title)}</h1>
+        <p class="muted" style="max-width: 65ch">${esc(c.description || "")}</p>
+        <div class="row" style="margin-top: 6px">
+          <button class="btn primary" type="button" id="setGoal">${state.goal === c.code ? "Your goal ✓" : "Set as my goal"}</button>
+          <button class="btn" type="button" id="askAbout">Ask the assistant</button>
+        </div>
+      </div>
+      <div style="flex:0 1 240px;background:var(--accent-soft);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px">
+        <p class="small" style="color:var(--accent-strong);font-weight:700">Profile match · rank ${rank}</p>
+        <span class="score num" style="font-size:52px;color:var(--accent-strong)">${Math.round(r.score)}<small>/100</small></span>
+        <div class="parts">${partRows(r)}</div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card"><h2>Why this career?</h2><p class="muted small" style="margin:4px 0 14px">Each reason comes from your own answers</p>
+        <ul class="reasons">${ex.reasons.map(x => `<li>${CHECK}<span>${esc(x.text)}</span></li>`).join("") || '<li class="muted">No single strong reason; the match comes from your overall profile.</li>'}</ul></div>
+      <div class="card"><h2>Knowledge it uses most</h2><p class="muted small" style="margin:4px 0 14px">Importance, 1 to 5</p>
+        <div style="display:flex;flex-direction:column;gap:10px">${know.map(([n, v]) => `<div><div class="row small" style="justify-content:space-between"><span>${esc(n)}</span><b class="num">${v.toFixed(1)}</b></div><div class="bar" style="margin-top:4px"><span style="width:${v / 5 * 100}%"></span></div></div>`).join("")}</div></div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:16px">
+      <div class="row" style="justify-content:space-between"><div><h2>Skill gap</h2><p class="muted small">Your level vs the level this career needs, on O*NET's 0–7 scale</p></div>
+        <div class="legend"><span><i style="background:var(--accent)"></i>Your level</span><span><i style="background:var(--gap-soft);border:2px dashed var(--gap)"></i>Gap to required</span><span><i style="background:var(--ink);width:4px"></i>Required level</span></div></div>
+      <div class="gapchart">${rows.map(x => `<div class="gaprow"><span>${esc(x.skill)}<br><span class="muted small">importance ${x.importance.toFixed(1)}/5</span></span>
+        <div class="track" role="img" aria-label="${esc(x.skill)}: you ${x.your.toFixed(1)}, required ${x.required.toFixed(1)} of 7">
+          <span class="you" style="width:${pct(Math.min(x.your, 7))}%"></span>
+          ${x.gap > 0 ? `<span class="need" style="left:${pct(x.your)}%;width:${pct(x.required) - pct(x.your)}%"></span>` : ""}
+          <span class="tick" style="left:calc(${pct(x.required)}% - 1px)"></span></div>
+        <span class="chip ${x.gap > 0.5 ? "gap" : "good"}">${x.gap > 2 ? "Major gap" : x.gap > 1 ? "Moderate gap" : x.gap > 0.5 ? "Small gap" : "Strong"}</span></div>`).join("") || '<p class="muted">No mapped skills for this career.</p>'}</div>
+    </div>
+    <div class="grid2">
+      <div class="card"><h2>Fix these first</h2><p class="muted small" style="margin:4px 0 14px">Ranked by importance × gap</p>
+        <ol style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px">${ex.gaps.slice(0, 4).map(g => `<li><b>${esc(g.skill)}</b><span class="muted small"> · you ${g.your.toFixed(1)} → need ${g.required.toFixed(1)}</span></li>`).join("") || "<li>No gaps above the threshold.</li>"}</ol></div>
+      <div class="card"><h2>Similar careers for you</h2><div style="display:flex;flex-direction:column;margin-top:10px">${similar.map(x => `<button type="button" class="btn link" style="justify-content:space-between;text-align:left;gap:12px;border-top:1px solid var(--line);border-radius:0;padding:12px 0;color:var(--ink)" onclick="openCareer('${esc(x.career.code)}')"><span>${esc(x.career.title)}</span><b class="num" style="color:var(--accent)">${Math.round(x.score)}</b></button>`).join("") || '<p class="muted small">No other careers from this field in your results.</p>'}</div></div>
+    </div>
+    <p class="muted small">${data.source === "example" ? "Example profile, not O*NET data." : "Career information adapted from " + esc(data.source) + " (CC BY 4.0)."} Scores are guidance, not a prediction of success.</p>`;
+  $("setGoal").addEventListener("click", () => { state.goal = c.code; state.done = {}; save(); toast("Goal set. Your roadmap is ready."); go("roadmap"); });
+  $("askAbout").addEventListener("click", () => { go("chat"); ask(`Why was ${c.title} recommended to me?`); });
+}
+
+/* ---------- roadmap ---------- */
+function roadmapSteps() {
+  const c = byCode(state.goal); if (!c || !complete()) return null;
+  const gaps = skillGaps(student(), data, c);
+  const steps = gaps.map(g => ({ id: "skill:" + g.skill, title: g.skill, body: `Raise from level ${g.your.toFixed(1)} to ${g.required.toFixed(1)} (importance ${g.importance.toFixed(1)}/5).`, tag: "Skill" }));
+  const top = gaps.slice(0, 2).map(g => g.skill).join(" and ") || "your strongest skills";
+  steps.push({ id: "project", title: "Build a portfolio project", body: `One project that uses ${top}, written up on GitHub or a short report.`, tag: "Project" });
+  steps.push({ id: "resume", title: "Check your resume against this career", body: "The resume analyser compares your resume with this career's skills. Coming in the next phase.", tag: "Resume" });
+  steps.push({ id: "apply", title: "Apply for internships", body: "Matching openings appear here once the jobs module is connected.", tag: "Jobs" });
+  return { c, steps };
+}
+function renderRoadmap() {
+  const el = $("v-roadmap"), rm = roadmapSteps();
+  if (!rm) { el.innerHTML = `<div class="card empty"><h2>No goal yet</h2><p class="muted">Open a career from your matches and choose “Set as my goal”.</p><button class="btn primary" type="button" data-go="results">Go to matches</button></div>`; return; }
+  const doneN = rm.steps.filter(s => state.done[s.id]).length, pct = Math.round(doneN / rm.steps.length * 100);
+  el.innerHTML = `
+    <div class="card" style="background:var(--ink);color:var(--bg);border:0;display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;align-items:center">
+      <div><p class="small" style="opacity:.75">Your goal</p><h1 style="font-size:34px">${esc(rm.c.title)}</h1><p class="small" style="opacity:.75;margin-top:4px">Built from your ${rm.steps.length - 3} skill gaps, most important first</p></div>
+      <div style="flex:0 1 280px;min-width:220px"><div class="row small" style="justify-content:space-between"><span>Progress</span><b class="num">${doneN} of ${rm.steps.length} · ${pct}%</b></div>
+        <div class="progress" style="margin-top:8px;background:rgba(127,127,127,.35)"><span style="width:${pct}%"></span></div></div>
+    </div>
+    <ol class="road">${rm.steps.map((s, k) => `<li class="${state.done[s.id] ? "done" : ""}">
+      <div class="rail"><span class="dot">${state.done[s.id] ? "✓" : k + 1}</span><span class="line"></span></div>
+      <div class="card step"><div class="row" style="justify-content:space-between"><h3>${esc(s.title)}</h3><span class="chip">${s.tag}</span></div>
+        <p class="muted small" style="margin-top:4px">${esc(s.body)}</p>
+        ${s.tag === "Skill" ? '<p class="small" style="margin-top:8px">Courses and practice: linked from the team’s verified course list in the next phase.</p>' : ""}
+        <label class="check" style="margin-top:6px"><input type="checkbox" data-done="${esc(s.id)}" ${state.done[s.id] ? "checked" : ""}> Mark as done</label></div></li>`).join("")}</ol>`;
+  el.querySelectorAll("[data-done]").forEach(cb => cb.addEventListener("change", () => { state.done[cb.dataset.done] = cb.checked; save(); renderRoadmap(); }));
+}
+
+/* ---------- assistant (rule-based, grounded in results) ---------- */
+function findCareers(q) {
+  const ql = q.toLowerCase(), hits = [];
+  for (const r of results) { const t = r.career.title.toLowerCase(); if (ql.includes(t) || ql.includes(t.replace(/s$/, ""))) hits.push(r); }
+  const m = [...ql.matchAll(/#(\d+)/g)].map(x => results[Number(x[1]) - 1]).filter(Boolean);
+  return [...new Set([...hits, ...m])];
+}
+function answer(q) {
+  const ql = q.toLowerCase(), src = "Your assessment · " + (data.source === "example" ? "example career data" : data.source);
+  if (!complete()) return { text: "Finish the assessment first, then I can explain your matches and skill gaps.", src: "No results yet" };
+  const s = student(), named = findCareers(q), target = named[0] || resultFor(state.selected) || resultFor(state.goal) || results[0];
+  if (/salary|pay|earn|income|package|lpa/.test(ql)) return { text: "I don't have reliable salary data yet, so I can't give you a figure. Salary and job openings come with the jobs module in the next phase.", src: "Knowledge base · no salary data" };
+  if (/compare|\bvs\b|versus|difference/.test(ql)) {
+    const [a, b] = named.length >= 2 ? named : [results[0], results[1]];
+    const line = r => `${r.career.title}: ${Math.round(r.score)}/100 (interests ${Math.round(r.interests * 100)}%, skills ${Math.round(r.skills * 100)}%, subjects ${Math.round(r.academic * 100)}%), ${skillGaps(s, data, r.career).length} skill gaps`;
+    return { text: `For your profile:\n• ${line(a)}\n• ${line(b)}\n\n${a.score >= b.score ? a.career.title : b.career.title} fits you a little better overall.`, src };
+  }
+  if (/smallest gap|easiest|closest/.test(ql)) {
+    const best = results.slice(0, 10).map(r => [r, skillGaps(s, data, r.career).reduce((t, g) => t + g.gap, 0)]).sort((x, y) => x[1] - y[1])[0];
+    return { text: `Among your top 10, ${best[0].career.title} has the smallest total skill gap (${best[1].toFixed(1)} levels to close). It is ranked #${results.indexOf(best[0]) + 1} with ${Math.round(best[0].score)}/100.`, src };
+  }
+  if (/gap|weak|improve|lack|missing/.test(ql)) {
+    const g = skillGaps(s, data, target.career).slice(0, 3);
+    return { text: g.length ? `Your biggest gaps for ${target.career.title}:\n` + g.map((x, i) => `${i + 1}. ${x.skill}: you ${x.your.toFixed(1)}, need ${x.required.toFixed(1)} (importance ${x.importance.toFixed(1)}/5)`).join("\n") : `You have no gaps above the threshold for ${target.career.title}.`, src };
+  }
+  if (/first|start|learn|begin|next/.test(ql)) {
+    const g = skillGaps(s, data, target.career)[0];
+    return { text: g ? `Start with ${g.skill}. For ${target.career.title} it has the highest priority (importance ${g.importance.toFixed(1)}/5 × a gap of ${g.gap.toFixed(1)} levels). Set the career as your goal to get the full roadmap.` : `You already meet the skill levels for ${target.career.title}. A portfolio project is the best next step.`, src };
+  }
+  if (/what does|what is|what do|tell me about|describe/.test(ql)) {
+    const c = target.career, top = data.skills.map((n, i) => [n, c.skill_im[i]]).filter(x => x[1] != null).sort((a, b) => b[1] - a[1]).slice(0, 4).map(x => x[0]);
+    return { text: `${c.title} (${c.domain}). ${data.source === "example" ? "" : c.description + "\n\n"}Most important skills: ${top.join(", ")}.`, src: data.source === "example" ? "Example data" : data.source };
+  }
+  if (/why|recommend|suit|fit|match/.test(ql)) {
+    const ex = explain(s, data, target.career);
+    return { text: `${target.career.title} scored ${Math.round(target.score)}/100 (rank #${results.indexOf(target) + 1}).\n` + (ex.reasons.length ? ex.reasons.map(x => "• " + x.text).join("\n") : "• It matches your overall profile shape, without one standout reason.") + `\n\nParts: interests ${Math.round(target.interests * 100)}%, skills ${Math.round(target.skills * 100)}%, subjects ${Math.round(target.academic * 100)}%.`, src };
+  }
+  return { text: "I can only answer from your results and the loaded career data. Try asking why a career was recommended, what your biggest gaps are, what to learn first, or to compare #1 vs #2.", src: "No matching information" };
+}
+const SUGGESTIONS = ["Why was #1 recommended to me?", "What are my biggest skill gaps?", "What should I learn first?", "Compare #1 vs #2", "Which career has my smallest gap?", "What can I earn?"];
+function renderChat() {
+  if (!state.chat.length) state.chat.push({ who: "bot", text: complete() ? `Hi${state.user ? " " + state.user.name.split(" ")[0] : ""}. Ask me about your matches, skill gaps or what to learn next.` : "Hi. Finish the assessment and I can explain your matches.", src: "" });
+  $("msgs").innerHTML = state.chat.map(m => `<div class="msg ${m.who}">${esc(m.text)}${m.src ? `<span class="src">Source: ${esc(m.src)}</span>` : ""}</div>`).join("");
+  $("msgs").scrollTop = $("msgs").scrollHeight;
+  $("sugg").innerHTML = SUGGESTIONS.map(s => `<button type="button">${esc(s)}</button>`).join("");
+}
+function ask(q) {
+  if (!q.trim()) return;
+  compute();
+  state.chat.push({ who: "user", text: q });
+  const a = answer(q); state.chat.push({ who: "bot", text: a.text, src: a.src });
+  state.chat = state.chat.slice(-30); save(); renderChat();
+}
+$("chatForm").addEventListener("submit", e => { e.preventDefault(); const v = $("chatInput").value; $("chatInput").value = ""; ask(v); });
+$("sugg").addEventListener("click", e => { const b = e.target.closest("button"); if (b) ask(b.textContent); });
+
+/* ---------- data ---------- */
+const EXPORT_CODE = `import json
+from ml.baseline_recommender import RIASEC, SOC_MAJOR_GROUPS
+
+codes = list(data["codes"])
+skills = list(data["skill_importance"].columns)
+knowledge = list(data["knowledge_importance"].columns)
+interests = data["interests"].reindex(index=codes, columns=RIASEC)
+skill_im = data["skill_importance"].reindex(index=codes, columns=skills)
+skill_lv = data["skill_level"].reindex(index=codes, columns=skills)
+know_im = data["knowledge_importance"].reindex(index=codes, columns=knowledge)
+job_zone = data.get("job_zone", pd.Series(dtype=float)).reindex(codes)
+
+def clean(values):
+    return [None if pd.isna(v) else round(float(v), 2) for v in values]
+
+export = {"source": "O*NET 31.0", "riasec": RIASEC, "skills": skills,
+          "knowledge": knowledge, "careers": []}
+for c in codes:
+    export["careers"].append({
+        "code": c,
+        "title": data["occupations"].loc[c, "Title"],
+        "description": data["occupations"].loc[c, "Description"],
+        "domain": SOC_MAJOR_GROUPS.get(c[:2], "Other"),
+        "job_zone": None if pd.isna(job_zone[c]) else int(job_zone[c]),
+        "interests": clean(interests.loc[c]),
+        "skill_im": clean(skill_im.loc[c]),
+        "skill_lv": clean(skill_lv.loc[c]),
+        "know_im": clean(know_im.loc[c]),
+    })
+
+out_file = Path("..") / "docs" / "careers.json"
+out_file.write_text(json.dumps(export), encoding="utf-8")
+print(len(export["careers"]), "careers exported to", out_file.resolve())
+print("File size:", round(out_file.stat().st_size / 1024), "KB")`;
+function renderData() {
+  $("dataStatus").textContent = data.source === "example"
+    ? `Using ${data.careers.length} illustrative example careers. Load your O*NET export to rank all of them with real ratings.`
+    : `Using ${data.source}: ${data.careers.length} careers, ${data.skills.length} skills, ${data.knowledge.length} knowledge areas.`;
+  $("exportCode").textContent = EXPORT_CODE;
+}
+function validData(d) {
+  return d && Array.isArray(d.careers) && d.careers.length && Array.isArray(d.riasec) && Array.isArray(d.skills) && Array.isArray(d.knowledge)
+    && d.careers.every(c => c.title && Array.isArray(c.interests) && c.interests.length === d.riasec.length && c.skill_im.length === d.skills.length && c.skill_lv.length === d.skills.length && c.know_im.length === d.knowledge.length);
+}
+$("dataFile").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    let d = null; try { d = JSON.parse(rd.result); } catch (err) { /* handled below */ }
+    if (!validData(d)) { $("dataError").textContent = "That file is not a careers.json export from the notebook. Run the export cell and choose docs\\careers.json."; $("dataError").hidden = false; return; }
+    $("dataError").hidden = true; data = d; saveData(); state.selected = null; state.goal = null; state.done = {}; state.chat = [];
+    compute(); save(); renderChrome(); renderData(); toast(`${d.careers.length} careers loaded`);
+  };
+  rd.readAsText(f);
+});
+$("resetData").addEventListener("click", () => { data = buildExample(); saveData(); state.selected = null; state.goal = null; state.done = {}; state.chat = []; compute(); save(); renderChrome(); renderData(); toast("Example data restored"); });
+$("copyCode").addEventListener("click", () => {
+  navigator.clipboard.writeText(EXPORT_CODE).then(() => toast("Code copied"), () => { const r = document.createRange(); r.selectNodeContents($("exportCode")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Selected. Press Ctrl+C to copy"); });
+});
+
+/* ---------- start ---------- */
+(function start() {
+  const saved = load(STORE_KEY); if (saved) state = Object.assign(state, saved);
+  const d = load(DATA_KEY); data = validData(d) ? d : buildExample();
+  compute(); renderChrome(); go("home");
+})();
+</script>
+</body></html>
