@@ -1,2 +1,6 @@
-flask>=3.0
-pytest>=8.0
+pandas
+numpy
+matplotlib
+openpyxl
+scikit-learn
+ipykernel
