@@ -82,6 +82,14 @@ def _read(onet_dir, filename):
     return pd.read_csv(path, sep="\t", dtype=str)
 
 
+def _drop_suppressed(df):
+    """Remove ratings O*NET flags as unreliable (Recommend Suppress = "Y", e.g. a very small sample).
+    Files without that column (Career Interest Types.txt) are returned unchanged."""
+    if "Recommend Suppress" not in df.columns:
+        return df
+    return df[df["Recommend Suppress"].fillna("").str.strip().str.upper() != "Y"]
+
+
 def _pivot(df, scale_id):
     """One row per occupation, one column per element, for one rating scale."""
     part = df[df["Scale ID"] == scale_id].copy()
@@ -90,16 +98,23 @@ def _pivot(df, scale_id):
                             values="Data Value", aggfunc="mean")
 
 
-def load_onet(onet_dir):
-    """Load the O*NET tables the baseline needs. Never modifies the raw files."""
-    skills_raw = pd.concat([_read(onet_dir, "Essential Skills.txt"),
-                            _read(onet_dir, "Transferable Skills.txt")])
+def load_onet(onet_dir, drop_suppressed=True):
+    """Load the O*NET tables the engines need. Never modifies the raw files.
+
+    drop_suppressed=True ignores rating rows marked Recommend Suppress = "Y" (data cleaning, Oct 2026).
+    Use False only to reproduce results from before that change.
+    """
+    clean = _drop_suppressed if drop_suppressed else (lambda df: df)
+    skills_raw = clean(pd.concat([_read(onet_dir, "Essential Skills.txt"),
+                                  _read(onet_dir, "Transferable Skills.txt")]))
+    knowledge_raw = clean(_read(onet_dir, "Knowledge.txt"))
     data = {
         "occupations": _read(onet_dir, "Occupation Data.txt").set_index("O*NET-SOC Code"),
         "interests": _pivot(_read(onet_dir, "Career Interest Types.txt"), "OI")[RIASEC],
         "skill_importance": _pivot(skills_raw, "IM"),   # how important (1-5)
         "skill_level": _pivot(skills_raw, "LV"),        # how much is needed (0-7)
-        "knowledge_importance": _pivot(_read(onet_dir, "Knowledge.txt"), "IM"),
+        "knowledge_importance": _pivot(knowledge_raw, "IM"),
+        "knowledge_level": _pivot(knowledge_raw, "LV"),   # used by engine v2 (subject readiness)
     }
     # Job Zone (1 = little preparation ... 5 = extensive preparation) - optional
     try:
@@ -146,6 +161,9 @@ def load_from_mysql(engine=None):
         FROM career_skill cs JOIN career c USING (career_id) JOIN skill s USING (skill_id)""")
     knowledge = query("""
         SELECT c.onet_code AS code, k.name AS element, 'IM' AS scale, ck.importance AS value
+        FROM career_knowledge ck JOIN career c USING (career_id) JOIN knowledge k USING (knowledge_id)
+        UNION ALL
+        SELECT c.onet_code, k.name, 'LV', ck.level
         FROM career_knowledge ck JOIN career c USING (career_id) JOIN knowledge k USING (knowledge_id)""")
 
     careers = careers.set_index("O*NET-SOC Code")
@@ -155,6 +173,7 @@ def load_from_mysql(engine=None):
         "skill_importance": _pivot(skills, "IM"),
         "skill_level": _pivot(skills, "LV"),
         "knowledge_importance": _pivot(knowledge, "IM"),
+        "knowledge_level": _pivot(knowledge, "LV"),
     }
     job_zone = pd.to_numeric(careers["job_zone"], errors="coerce").dropna()
     if not job_zone.empty:
@@ -195,8 +214,8 @@ def _profile_similarity(student, table):
     return (r + 1) / 2
 
 
-def recommend(student, data, top_n=5, min_job_zone=None):
-    """Rank all occupations for one student. Returns the top_n as a table."""
+def recommend_v1(student, data, top_n=5, min_job_zone=None):
+    """v1: rank all occupations for one student. Returns the top_n as a table."""
     codes = data["codes"]
     if min_job_zone is not None and "job_zone" in data:
         jz = data["job_zone"].reindex(codes)
@@ -227,8 +246,8 @@ def recommend(student, data, top_n=5, min_job_zone=None):
 
 
 # ---------------------------------------------------------------- explaining
-def explain(student, data, code, n=3):
-    """Reasons for a recommendation and the student's biggest skill gaps,
+def explain_v1(student, data, code, n=3):
+    """v1: reasons for a recommendation and the student's biggest skill gaps,
     built only from the student's answers and the O*NET ratings."""
     reasons = []
 
@@ -282,3 +301,8 @@ def explain(student, data, code, n=3):
                                        "your_level", "gap", "priority"])
     gaps = gaps.sort_values("priority", ascending=False).head(n).reset_index(drop=True)
     return reasons, gaps
+
+
+# Old names still work (tests, notebook 02 and the MySQL comparison use them).
+recommend = recommend_v1
+explain = explain_v1
