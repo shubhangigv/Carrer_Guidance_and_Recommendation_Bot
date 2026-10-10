@@ -12,9 +12,13 @@ from the student's own answers, finds skill gaps, and builds a learning roadmap.
 | Baseline recommender with explanations and skill gaps (`ml/baseline_recommender.py`) | Done |
 | Working browser prototype (`frontend/prototype/pathfinder.html`) | Done |
 | Tests for the engine (`tests/`) | Done |
-| Student survey script (`tools/create_career_survey.gs`) | Ready, not sent yet |
-| MySQL database: 13-table schema, O*NET loader, engine reads from MySQL (`database/`, `backend/db.py`) | Done (verify on your PC with the real O*NET data) |
-| FastAPI backend, React frontend | Next |
+| Student survey script (`tools/create_career_survey.gs`, 9 questions, "No experience" / "Can't assess" options) | Ready, not sent yet |
+| MySQL database: 13-table schema, O*NET loader, engine reads from MySQL, files-vs-MySQL tests (`database/`, `backend/db.py`) | Done (verify on your PC with the real O*NET data) |
+| `answer_status` for answers without a number (`database/migrations/002_answer_status.sql`) | Done |
+| Engine v2: readiness, score ranges for unknown answers, field diversity (`ml/recommender_v2.py`) | Not done (10-16 Oct) |
+| No-survey experiments (`experiments/`, `docs/results/`) | Not done (10-16 Oct) |
+| FastAPI backend | Not done (17-23 Oct) |
+| Prototype connected to the API, `engine.js` v2, React | Not done (24-31 Oct) |
 | ML comparison, Sentence-BERT, hybrid ranking | After survey data |
 | ESCO, NCO-2015, jobs, resume analyser, RAG chatbot | Later |
 
@@ -36,7 +40,9 @@ https://www.onetcenter.org/dl_files/database/db_31_0_text.zip and extract it int
 2. `Copy-Item .env.example .env`, then put your MySQL password in `.env` (never commit `.env`).
 3. `python scripts\load_onet_to_mysql.py` creates the 13 tables from `database/schema.sql`, fills them
    from O*NET and prints the row counts. It is safe to run again (no duplicates).
-4. `pytest -q -rs` checks that MySQL and the `.txt` files give identical recommendations.
+4. Database created before October 2026? Run the migration once (safe to repeat):
+   `python -c "from backend.db import get_engine, run_sql_file; run_sql_file(get_engine(), 'database/migrations/002_answer_status.sql')"`
+5. `pytest -q -rs` checks that MySQL and the `.txt` files give identical recommendations.
 
 ## Run
 

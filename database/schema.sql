@@ -104,14 +104,18 @@ CREATE TABLE IF NOT EXISTS assessment (
     CONSTRAINT fk_assessment_student FOREIGN KEY (student_id) REFERENCES student (student_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- One row per answer, e.g. (7, 'skill', 'Programming', 4).
+-- One row per answer, e.g. (7, 'skill', 'Programming', 4, 'rated').
+-- A student can also answer 'No experience' / 'Not studied' / 'Cannot assess' instead of a number:
+-- then rating is NULL and answer_status says which. (Existing database: run migrations/002_answer_status.sql)
 CREATE TABLE IF NOT EXISTS assessment_rating (
     assessment_id INT UNSIGNED NOT NULL,
     category      VARCHAR(20)  NOT NULL,            -- interest, skill or subject
     item          VARCHAR(100) NOT NULL,            -- questionnaire item, e.g. Programming
-    rating        TINYINT UNSIGNED NOT NULL,
+    rating        TINYINT UNSIGNED NULL,            -- 1-5, NULL when answer_status is not 'rated'
+    answer_status ENUM('rated','no_experience','not_studied','cant_assess') NOT NULL DEFAULT 'rated',
     PRIMARY KEY (assessment_id, category, item),
     CONSTRAINT ck_assessment_rating_range CHECK (rating BETWEEN 1 AND 5),
+    CONSTRAINT ck_assessment_rating_status CHECK ((answer_status = 'rated') = (rating IS NOT NULL)),
     CONSTRAINT fk_assessment_rating_assessment FOREIGN KEY (assessment_id) REFERENCES assessment (assessment_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
