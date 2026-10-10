@@ -31,6 +31,7 @@ from fake_onet import SCIENCE_STUDENT, write_fake_onet  # noqa: E402
 from load_onet_to_mysql import load  # noqa: E402
 from ml.baseline_recommender import (RIASEC, SKILL_MAP, SUBJECT_MAP, explain,  # noqa: E402
                                      load_from_mysql, load_onet, recommend)
+from ml.recommender_v2 import SKILL_MAP_V2, SUBJECT_MAP_V2, explain_v2, recommend_v2  # noqa: E402
 
 TEST_DB = os.getenv("MYSQL_TEST_DATABASE", "career_guidance_test")
 REAL_ONET_DIR = ROOT / "data" / "raw" / "onet"
@@ -62,6 +63,16 @@ STUDENT_B = {
 }
 STUDENTS = [STUDENT_A, STUDENT_B, SCIENCE_STUDENT]
 
+# Synthetic v2 test inputs (survey format), including the answers that are not numbers.
+STUDENTS_V2 = [
+    {"interests": STUDENT_A["interests"],
+     "skills": {r: {"rating": 1 + i % 5} for i, r in enumerate(SKILL_MAP_V2)} | {"Leadership": "no_experience"},
+     "subjects": {r: {"rating": 5 - i % 5} for i, r in enumerate(SUBJECT_MAP_V2)} | {"Biology": "cant_assess"}},
+    {"interests": STUDENT_B["interests"],
+     "skills": {r: "cant_assess" for r in SKILL_MAP_V2} | {"Communication": {"rating": 5}},
+     "subjects": {r: "not_studied" for r in SUBJECT_MAP_V2} | {"Languages": {"rating": 4}}},
+]
+
 
 def _connect(database):
     """Return an engine, or skip the test if MySQL is not reachable."""
@@ -86,6 +97,17 @@ def _assert_same(student, files, mysql, top_n=10, min_job_zone=None):
         pd.testing.assert_frame_equal(gaps_a, gaps_b)
 
 
+def _assert_same_v2(student, files, mysql, min_job_zone=None):
+    a = recommend_v2(student, files, top_n=10, min_job_zone=min_job_zone)
+    b = recommend_v2(student, mysql, top_n=10, min_job_zone=min_job_zone)
+    pd.testing.assert_frame_equal(a, b)
+    for code in a["code"]:
+        reasons_a, gaps_a = explain_v2(student, files, code)
+        reasons_b, gaps_b = explain_v2(student, mysql, code)
+        assert reasons_a == reasons_b
+        pd.testing.assert_frame_equal(gaps_a, gaps_b)
+
+
 # ---------------------------------------------------------------- fake data, throw-away database
 @pytest.fixture
 def messy_onet_dir(tmp_path):
@@ -93,8 +115,8 @@ def messy_onet_dir(tmp_path):
     missing ratings, so ties, gaps and missing values are all exercised."""
     folder = write_fake_onet(tmp_path)
     rng = np.random.default_rng(7)
-    skills = sorted({e for v in SKILL_MAP.values() for e in v})
-    knowledge = sorted({e for v in SUBJECT_MAP.values() for e in v})
+    skills = sorted({e for m in (SKILL_MAP, SKILL_MAP_V2) for v in m.values() for e in v})
+    knowledge = sorted({e for m in (SUBJECT_MAP, SUBJECT_MAP_V2) for v in m.values() for e in v})
 
     def add(filename, rows):
         old = pd.read_csv(folder / filename, sep="\t", dtype=str)
@@ -117,7 +139,8 @@ def messy_onet_dir(tmp_path):
                 for scale, (lo, hi) in {"IM": (1, 5), "LV": (0, 7)}.items():
                     rows.append({"O*NET-SOC Code": code, "Element ID": "x", "Element Name": e, "Scale ID": scale,
                                  "Data Value": f"{rng.uniform(lo, hi):.2f}", "N": "", "Standard Error": "",
-                                 "Lower CI Bound": "", "Upper CI Bound": "", "Recommend Suppress": "N",
+                                 "Lower CI Bound": "", "Upper CI Bound": "",
+                                 "Recommend Suppress": "Y" if rng.random() < 0.05 else "N",   # dropped on load
                                  "Not Relevant": "", "Date": "08/2026", "Domain Source": "Test"})
     add("Occupation Data.txt", occ)
     add("Career Interest Types.txt", interests)
@@ -170,6 +193,9 @@ def test_loader_mysql_gives_same_results_as_files(test_engine, messy_onet_dir):
     for student in STUDENTS:
         _assert_same(student, files, mysql)
         _assert_same(student, files, mysql, min_job_zone=3)
+    for student in STUDENTS_V2:
+        _assert_same_v2(student, files, mysql)
+        _assert_same_v2(student, files, mysql, min_job_zone=3)
 
 
 # ---------------------------------------------------------------- real O*NET, real database
@@ -185,3 +211,5 @@ def test_real_onet_mysql_gives_same_top5_as_files():
     assert len(mysql["codes"]) == len(files["codes"])
     for student in (STUDENT_A, STUDENT_B):
         _assert_same(student, files, mysql, top_n=5, min_job_zone=3)
+    for student in STUDENTS_V2:
+        _assert_same_v2(student, files, mysql, min_job_zone=3)
