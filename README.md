@@ -15,8 +15,8 @@ from the student's own answers, finds skill gaps, and builds a learning roadmap.
 | Student survey script (`tools/create_career_survey.gs`, 9 questions, "No experience" / "Can't assess" options) | Ready, not sent yet |
 | MySQL database: 13-table schema, O*NET loader, engine reads from MySQL, files-vs-MySQL tests (`database/`, `backend/db.py`) | Done (verify on your PC with the real O*NET data) |
 | `answer_status` for answers without a number (`database/migrations/002_answer_status.sql`) | Done |
-| Engine v2: readiness, score ranges for unknown answers, field diversity (`ml/recommender_v2.py`) | Not done (10-16 Oct) |
-| No-survey experiments (`experiments/`, `docs/results/`) | Not done (10-16 Oct) |
+| Engine v2: readiness, score ranges for unknown answers, field diversity (`ml/recommender_v2.py`) | Done (verify on real O*NET) |
+| No-survey experiments (`experiments/`, `docs/results/`) | Scripts done; run them on real O*NET (see `docs/results/README.md`) |
 | FastAPI backend | Not done (17-23 Oct) |
 | Prototype connected to the API, `engine.js` v2, React | Not done (24-31 Oct) |
 | ML comparison, Sentence-BERT, hybrid ranking | After survey data |
@@ -50,7 +50,9 @@ https://www.onetcenter.org/dl_files/database/db_31_0_text.zip and extract it int
 |---|---|
 | List O*NET files | `python scripts\inventory_onet.py` |
 | Explore the data | open `notebooks/01_explore_onet.ipynb` |
-| Get recommendations | open `notebooks/02_baseline_demo.ipynb` and Run All |
+| Get recommendations (v1) | open `notebooks/02_baseline_demo.ipynb` and Run All |
+| Engine v2 demo (v1 vs v2, ranges) | open `notebooks/03_engine_v2_demo.ipynb` and Run All |
+| No-survey experiments | see `docs/results/README.md` (`python experiments\self_match.py` etc.) |
 | Prototype | open `frontend/prototype/pathfinder.html` in a browser; load `docs/careers.json` (made by notebook 02's last cell) in the Data tab for real data |
 | Load O*NET into MySQL | `python scripts\load_onet_to_mysql.py` |
 | Tests | `pip install -r requirements-dev.txt` then `pytest -q -rs` (MySQL tests are skipped if MySQL is not running) |

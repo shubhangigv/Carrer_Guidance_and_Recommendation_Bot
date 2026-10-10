@@ -30,8 +30,8 @@ give Windows PowerShell commands, and say how to run and verify it.
 | O*NET exploration, baseline engine v1, prototype, survey script | DONE |
 | MySQL schema (`database/schema.sql`), `backend/db.py`, loader, files-vs-MySQL tests | DONE |
 | `assessment_rating.answer_status` (migration `database/migrations/002_answer_status.sql`) | DONE |
-| Engine v2 (`ml/recommender_v2.py`, spec in "Design decisions v2") | NOT done |
-| No-survey experiments (`experiments/`, results in `docs/results/`) | NOT done |
+| Engine v2 (`ml/recommender_v2.py`, spec in "Design decisions v2"), tests, notebook 03 | DONE (verify on real O*NET) |
+| No-survey experiments (`experiments/`, results in `docs/results/`) | Scripts DONE, NOT run on real O*NET yet |
 | FastAPI backend (`backend/main.py`) | NOT done |
 | Prototype calls the API, `engine.js` v2 | NOT done |
 | Survey sent, survey analysis, ML comparison | NOT done (no survey data yet) |
@@ -60,15 +60,20 @@ Supervised ML is an experiment compared against it once survey data exists.
 ## Repository layout
 
 ```
-ml/baseline_recommender.py      the recommendation engine (load O*NET, match, explain, skill gaps)
+ml/baseline_recommender.py      engine v1 + the O*NET loaders (load_onet, load_from_mysql)
 notebooks/01_explore_onet.ipynb  data exploration
 notebooks/02_baseline_demo.ipynb demo on two test profiles + careers.json export
+notebooks/03_engine_v2_demo.ipynb v1 vs v2 on the hand-made test profiles, ranges and follow-ups
+ml/recommender_v2.py            engine v2 (readiness, ranges for unknown answers, diversity, target career)
+experiments/                    Phase B no-survey experiments (self_match, weight_sensitivity, masking, summarise)
+docs/results/                   experiment CSVs, README (what each tests + limitations), summary.md
 scripts/inventory_onet.py        lists every O*NET file with rows and columns
 frontend/prototype/pathfinder.html  working browser prototype (engine ported to JavaScript)
 frontend/prototype/engine.js     the JavaScript engine on its own (same results as Python)
 tools/create_career_survey.gs    Google Apps Script that builds the 9-question student survey
 tests/test_baseline_recommender.py  pytest tests with a tiny fake O*NET folder (tests/fake_onet.py)
 tests/test_mysql_matches_files.py   files vs MySQL give identical results (skipped if MySQL is not running)
+tests/test_recommender_v2.py     engine v2 spec tests;  tests/test_experiments.py  experiment scripts on fake data
 database/schema.sql              the 13 MySQL tables (CREATE TABLE IF NOT EXISTS)
 database/migrations/            ALTER scripts for an existing database (002_answer_status.sql)
 backend/db.py                    get_engine() from .env, run_sql_file()
@@ -100,8 +105,11 @@ data/raw/onet/                   O*NET text files (not in Git; download separate
   shown when IM ≥ 3 and gap > 0.5.
 - Missing values: filled with the career's row mean. Flat answers give a neutral 50. Job Zone filter (≥ 3) for students.
 - Reasons come only from the student's own answers.
-- Known weaknesses: the top 5 can all be in one field (needs diversity re-ranking); preferences/values not in the score;
-  `Recommend Suppress = Y` ratings not filtered; self-rating to level mapping is approximate.
+- Known weaknesses of v1 (addressed in v2): the top 5 can all be in one field; no handling of unknown answers.
+  Still open: preferences/values not in the score; self-rating to level mapping is approximate.
+
+Note: since Oct 2026 `load_onet()` drops `Recommend Suppress = Y` rows, so v1 numbers on real data may differ
+slightly from the ones below (use `load_onet(dir, drop_suppressed=False)` to reproduce them).
 
 Sanity results on real O*NET 31.0 (hand-made profiles, NOT accuracy):
 biology/research profile → Biochemists and Biophysicists 81, Bioinformatics Scientists 80, Medical Scientists 79;
@@ -166,6 +174,10 @@ no_experience lowers readiness vs rating 3 and gives a "start from scratch" gap;
 denominator (manual calculation); diversity max 2 per field in the top 5; suppressed rows ignored; display
 thresholds; matching profile ranks first; flat interests -> 0.5; all v1 tests still pass.
 Demo: `notebooks/03_engine_v2_demo.ipynb` (hand-made test profiles, not real students).
+
+**Phase B results (one line):** experiment scripts written and tested on fake data only; NOT yet run on real
+O*NET 31.0 (download blocked in the dev session), so there are no numbers yet. Run them locally
+(`docs/results/README.md`), then replace this line with the main numbers from `docs/results/summary.md`.
 
 ## Database (MySQL, 13 tables, from the ER diagram; built in `database/schema.sql`)
 

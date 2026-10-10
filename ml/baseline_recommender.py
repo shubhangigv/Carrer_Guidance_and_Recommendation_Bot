@@ -205,7 +205,7 @@ def _profile_similarity(student, table):
     cols = [c for c in student.index if c in table.columns]
     s = student[cols].astype(float)
     t = table[cols].astype(float)
-    t = t.T.fillna(t.mean(axis=1)).T                 # fill a missing value with that row's mean
+    t = t.where(t.notna(), t.mean(axis=1), axis=0)   # fill a missing value with that row's mean
     s_c = s - s.mean()
     t_c = t.sub(t.mean(axis=1), axis=0)
     denom = np.sqrt((s_c ** 2).sum()) * np.sqrt((t_c ** 2).sum(axis=1))
