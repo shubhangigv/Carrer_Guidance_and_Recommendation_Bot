@@ -193,6 +193,8 @@ def test_explain_v2_reasons_come_from_own_answers(data):
     assert any("Investigative" in r for r in reasons)
     assert any(r.startswith("Your Research") for r in reasons)
     assert sum(r.startswith("Your") for r in reasons) <= 2
+    reasons, _ = explain_v2(SCIENTIST, data, "27-0001.00")   # Designer: Investigative is only 1.5 of 7 there
+    assert not any("Investigative" in r for r in reasons)
     nothing_high = student(default=2)
     reasons, _ = explain_v2(nothing_high, data, LAB)
     assert not any(r.startswith("Your") for r in reasons)  # no rating >= 4 -> no skill reasons

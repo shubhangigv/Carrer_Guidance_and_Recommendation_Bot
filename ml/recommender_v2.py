@@ -33,7 +33,8 @@ GAP_MIN = 0.5                # ... and the gap is more than 0.5 levels (0-7 scal
 QUESTION_MIN_IM = 3.0        # target_career asks about rows with an element of importance >= 3
 REASON_MIN_RATING = 4        # a skill/subject reason needs the student's rating >= 4 ...
 REASON_MIN_IM = 3.5          # ... and the element's importance >= 3.5 for this career
-REASON_MIN_INTEREST = 3.5    # an interest reason needs the student's interest >= 3.5
+REASON_MIN_INTEREST = 3.5    # an interest reason needs the student's interest >= 3.5 ...
+REASON_MIN_OI = 4.0          # ... and the career's own score for that type >= 4 (middle of O*NET's 1-7)
 INTEREST_FIT_STRONG = 0.65   # interest fit labels used by target_career
 INTEREST_FIT_OK = 0.50
 
@@ -376,7 +377,7 @@ def explain_v2(student, data, code, n=None):
     # Interests: the student's high interests that are among this career's top 3 types
     occ = data["interests"].loc[code].sort_values(ascending=False)
     stu = _check_interests(student)
-    hits = [(occ[t], t) for t in occ.index[:3] if stu[t] >= REASON_MIN_INTEREST]
+    hits = [(occ[t], t) for t in occ.index[:3] if stu[t] >= REASON_MIN_INTEREST and occ[t] >= REASON_MIN_OI]
     for _, t in sorted(hits, reverse=True)[:2]:
         reasons.append(f"High {t} interest ({_fmt(stu[t])}/5) - a top interest type for this career")
 
