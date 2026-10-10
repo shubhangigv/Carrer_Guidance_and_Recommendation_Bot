@@ -21,7 +21,7 @@ from sqlalchemy import text
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 from backend.db import get_engine, run_sql_file  # noqa: E402
-from ml.baseline_recommender import RIASEC, SOC_MAJOR_GROUPS, _pivot, _read, load_onet  # noqa: E402
+from ml.baseline_recommender import RIASEC, SOC_MAJOR_GROUPS, _read, load_onet  # noqa: E402
 
 ONET_DIR = PROJECT_ROOT / "data" / "raw" / "onet"
 
@@ -70,9 +70,7 @@ def _check_two_decimals(data):
 
 
 def load(engine, onet_dir=ONET_DIR):
-    data = load_onet(onet_dir)
-    # Knowledge level (LV) is not used by the engine, but the knowledge table has a column for it.
-    data["knowledge_level"] = _pivot(_read(onet_dir, "Knowledge.txt"), "LV")
+    data = load_onet(onet_dir)   # already drops Recommend Suppress = "Y" rows, so MySQL stores clean values
     _check_two_decimals(data)
 
     run_sql_file(engine)
