@@ -17,7 +17,7 @@ from the student's own answers, finds skill gaps, and builds a learning roadmap.
 | `answer_status` for answers without a number (`database/migrations/002_answer_status.sql`) | Done |
 | Engine v2: readiness, score ranges for unknown answers, field diversity (`ml/recommender_v2.py`) | Done (verify on real O*NET) |
 | No-survey experiments (`experiments/`, `docs/results/`) | Scripts done; run them on real O*NET (see `docs/results/README.md`) |
-| FastAPI backend | Not done (17-23 Oct) |
+| FastAPI backend: auth, assessment, recommendations, search, target career (`backend/main.py`) | Done |
 | Prototype connected to the API, `engine.js` v2, React | Not done (24-31 Oct) |
 | ML comparison, Sentence-BERT, hybrid ranking | After survey data |
 | ESCO, NCO-2015, jobs, resume analyser, RAG chatbot | Later |
@@ -44,6 +44,28 @@ https://www.onetcenter.org/dl_files/database/db_31_0_text.zip and extract it int
    `python -c "from backend.db import get_engine, run_sql_file; run_sql_file(get_engine(), 'database/migrations/002_answer_status.sql')"`
 5. `pytest -q -rs` checks that MySQL and the `.txt` files give identical recommendations.
 
+### API (FastAPI)
+
+1. `pip install -r requirements-dev.txt` (adds FastAPI, uvicorn, bcrypt, PyJWT, httpx).
+2. In `.env` set `JWT_SECRET` to a long random string:
+   `python -c "import secrets; print(secrets.token_urlsafe(48))"` (see `.env.example`).
+3. Start the server: `uvicorn backend.main:app --reload`
+4. Open http://127.0.0.1:8000/docs. Try `POST /auth/register`, then `POST /auth/login`, copy `access_token`,
+   click **Authorize** (top right) and paste it. Then `POST /assessment` → `GET /recommend`.
+5. `GET /health` shows where the data comes from: `"data_source": "mysql"` (O*NET loaded into MySQL) or
+   `"files"` (MySQL not running or empty; then accounts and answers are kept in memory and lost on restart).
+
+| Endpoint | Login? | What it does |
+|---|---|---|
+| `POST /auth/register`, `POST /auth/login` | no | create an account (bcrypt-hashed password), get a token |
+| `POST /assessment` | yes | save the survey answers (rating 1-5, `no_experience`, `not_studied`, `cant_assess`) |
+| `GET /recommend?assessment_id=&top_n=` | yes | engine v2 top careers (score / range / withheld, follow-ups, reasons); saved with `model_version = v2` |
+| `GET /careers/search?q=` | no | search by title and O*NET alternate titles |
+| `GET /careers/{career_id}` | no | description, field, Job Zone |
+| `GET /target/{career_id}/questions?assessment_id=` | yes | survey rows still needed for that career |
+| `POST /target/{career_id}` | yes | readiness range, gaps, interest check, nearby alternatives |
+| `GET /health` | no | data source, storage, number of careers |
+
 ## Run
 
 | What | How |
@@ -55,6 +77,7 @@ https://www.onetcenter.org/dl_files/database/db_31_0_text.zip and extract it int
 | No-survey experiments | see `docs/results/README.md` (`python experiments\self_match.py` etc.) |
 | Prototype | open `frontend/prototype/pathfinder.html` in a browser; load `docs/careers.json` (made by notebook 02's last cell) in the Data tab for real data |
 | Load O*NET into MySQL | `python scripts\load_onet_to_mysql.py` |
+| API | `uvicorn backend.main:app --reload`, then open http://127.0.0.1:8000/docs |
 | Tests | `pip install -r requirements-dev.txt` then `pytest -q -rs` (MySQL tests are skipped if MySQL is not running) |
 | Create the survey | paste `tools/create_career_survey.gs` into script.google.com and run it |
 
