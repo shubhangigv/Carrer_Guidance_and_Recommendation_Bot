@@ -154,7 +154,7 @@ in the top 5 (greedy re-rank, then fill the rest normally).
 **A8. Functions.** `recommend_v2(student, data, top_n=10, min_job_zone=3, diversity=True)` -> DataFrame with code,
 career, field, interest_fit, skill_low, skill_high, subject_low, subject_high, match_low, match_high, coverage,
 critical_unknowns, display, follow_ups. `explain_v2(student, data, code)` -> reasons (only from the student's own
-answers, ranked per career, max 2 interest, 2 skill, 2 subject) and gaps (gap = LV - L, shown if IM >= 3 and
+answers, ranked per career, max 2 interest, 2 skill, 2 subject; an interest reason needs the career's own OI >= 4) and gaps (gap = LV - L, shown if IM >= 3 and
 gap > 0.5, priority = IM x gap; no_experience gaps labelled "start from scratch"; unknown elements listed as
 "not assessed - answer to check"). `target_career(student, data, code)` -> questions needed (mapped rows whose
 elements have IM >= 3 and are unanswered/unknown), readiness range, gaps, interest fit check, up to 5 nearby
