@@ -232,3 +232,24 @@ def test_flow_with_mysql_repository(onet_dir, onet):
         engine.dispose()
         with server.begin() as conn:
             conn.execute(sqlalchemy.text(f"DROP DATABASE IF EXISTS `{db}`"))
+
+
+# ---------------------------------------------------------------- student web app (frontend/app)
+def test_web_app_is_served(client):
+    r = client.get("/", follow_redirects=False)
+    assert r.status_code in (302, 307) and r.headers["location"] == "/app/"
+    page = client.get("/app/")
+    assert page.status_code == 200 and "Pathfinder" in page.text
+    for name in ("api.js", "app.js", "styles.css"):
+        assert client.get(f"/app/{name}").status_code == 200
+
+
+def test_web_app_questions_match_the_engine():
+    """The rows in frontend/app/app.js must be exactly the survey rows the API accepts."""
+    import re
+    from ml.recommender_v2 import SKILL_MAP_V2, SUBJECT_MAP_V2
+    js = (ROOT / "frontend" / "app" / "app.js").read_text(encoding="utf-8")
+    rows = {key: re.findall(r'"([^"]+)"', block)
+            for key, block in re.findall(r'key: "(skills|subjects)".*?rows: \[(.*?)\]', js, re.S)}
+    assert rows["skills"] == list(SKILL_MAP_V2)
+    assert rows["subjects"] == list(SUBJECT_MAP_V2)

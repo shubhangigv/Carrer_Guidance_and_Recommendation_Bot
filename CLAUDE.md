@@ -23,7 +23,7 @@ give Windows PowerShell commands, and say how to run and verify it.
 - Do not use gender, religion, caste or other sensitive attributes as recommendation inputs.
 - Keep the architecture below unless the team agrees to change it.
 
-## Status (updated 10 Oct 2026)
+## Status (updated 14 Oct 2026)
 
 | Part | Status |
 |---|---|
@@ -33,7 +33,8 @@ give Windows PowerShell commands, and say how to run and verify it.
 | Engine v2 (`ml/recommender_v2.py`, spec in "Design decisions v2"), tests, notebook 03 | DONE (verify on real O*NET) |
 | No-survey experiments (`experiments/`, results in `docs/results/`) | Scripts DONE, NOT run on real O*NET yet |
 | FastAPI backend (`backend/main.py`, tests in `tests/test_api.py`) | DONE (test by hand in /docs) |
-| Prototype calls the API, `engine.js` v2 | NOT done |
+| Student web app on the API (`frontend/app/`, served by FastAPI at `/app/`) | DONE (Phase 3a, 14 Oct) |
+| React version, `engine.js` v2 for the offline prototype | NOT done |
 | Survey sent, survey analysis, ML comparison | NOT done (no survey data yet) |
 
 ## Plan to the deadline (whole project finished by 31 Oct 2026)
@@ -70,6 +71,7 @@ docs/results/                   experiment CSVs, README (what each tests + limit
 scripts/inventory_onet.py        lists every O*NET file with rows and columns
 frontend/prototype/pathfinder.html  working browser prototype (engine ported to JavaScript)
 frontend/prototype/engine.js     the JavaScript engine on its own (same results as Python)
+frontend/app/                    student web app on the API: index.html, api.js (all fetch calls), app.js, styles.css
 tools/create_career_survey.gs    Google Apps Script that builds the 9-question student survey
 tests/test_baseline_recommender.py  pytest tests with a tiny fake O*NET folder (tests/fake_onet.py)
 tests/test_mysql_matches_files.py   files vs MySQL give identical results (skipped if MySQL is not running)
@@ -213,7 +215,9 @@ O*NET 31.0 (download blocked in the dev session), so there are no numbers yet. R
 1b. Engine v2 + no-survey experiments (Phase A + B, spec above).
 2. ~~FastAPI~~ done (`uvicorn backend.main:app --reload`, Swagger at `/docs`). `GET /recommend` saves rows with `model_version = "v2"`
    and `match_score` = the lower bound. Withheld careers return `match_low = null` (interest fit only).
-3. **Frontend**: prototype calls the API; then React with the same screens.
+3. **Frontend**: 3a DONE - `frontend/app/` (plain HTML/JS, no build step) is served by FastAPI at `/app/`
+   (`/` redirects there); its question rows must equal SKILL_MAP_V2 / SUBJECT_MAP_V2 (checked in `tests/test_api.py`).
+   Next: React with the same screens.
 4. **Survey** (Google Form from `tools/create_career_survey.gs`, 1st–3rd year students): analysis notebook;
    map form answers to engine input (form has 6 interest rows, 8 skills, 8 subjects incl. merged
    "Physics/Chemistry" and "Commerce/Economics"); Hit Rate@5 of the student's aimed field (Q8).
