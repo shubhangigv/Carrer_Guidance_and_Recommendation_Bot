@@ -23,6 +23,25 @@ give Windows PowerShell commands, and say how to run and verify it.
 - Do not use gender, religion, caste or other sensitive attributes as recommendation inputs.
 - Keep the architecture below unless the team agrees to change it.
 
+## Status (updated 10 Oct 2026)
+
+| Part | Status |
+|---|---|
+| O*NET exploration, baseline engine v1, prototype, survey script | DONE |
+| MySQL schema (`database/schema.sql`), `backend/db.py`, loader, files-vs-MySQL tests | DONE |
+| `assessment_rating.answer_status` (migration `database/migrations/002_answer_status.sql`) | DONE |
+| Engine v2 (`ml/recommender_v2.py`, spec in "Design decisions v2"), tests, notebook 03 | DONE (verify on real O*NET) |
+| No-survey experiments (`experiments/`, results in `docs/results/`) | Scripts DONE, NOT run on real O*NET yet |
+| FastAPI backend (`backend/main.py`, tests in `tests/test_api.py`) | DONE (test by hand in /docs) |
+| Prototype calls the API, `engine.js` v2 | NOT done |
+| Survey sent, survey analysis, ML comparison | NOT done (no survey data yet) |
+
+## Plan to the deadline (whole project finished by 31 Oct 2026)
+
+- 10-16 Oct: Phase A (engine v2) + Phase B (no-survey experiments).
+- 17-23 Oct: Phase E (FastAPI) + survey analysis.
+- 24-31 Oct: Phase F (connect the prototype to the API, `engine.js` v2), ML comparison, report, demo.
+
 ## Stack and decisions
 
 | Area | Choice |
@@ -30,7 +49,7 @@ give Windows PowerShell commands, and say how to run and verify it.
 | Language | Python 3.13 (Windows, VS Code, `.venv`) |
 | Data / ML | pandas, NumPy, scikit-learn; later XGBoost, sentence-transformers |
 | Database | **MySQL + MySQL Workbench**, SQLAlchemy + PyMySQL (`backend/db.py`, settings from `.env`) |
-| Backend | FastAPI (planned) |
+| Backend | FastAPI (`backend/main.py`), bcrypt (not passlib), PyJWT; secret + expiry from `.env` |
 | Frontend | React (planned); a working single-file prototype exists |
 | Data source | O*NET 31.0 (Aug 2026, CC BY 4.0); later ESCO v1.2.1 and India's NCO-2015 via ISCO-08 codes |
 
@@ -41,17 +60,28 @@ Supervised ML is an experiment compared against it once survey data exists.
 ## Repository layout
 
 ```
-ml/baseline_recommender.py      the recommendation engine (load O*NET, match, explain, skill gaps)
+ml/baseline_recommender.py      engine v1 + the O*NET loaders (load_onet, load_from_mysql)
 notebooks/01_explore_onet.ipynb  data exploration
 notebooks/02_baseline_demo.ipynb demo on two test profiles + careers.json export
+notebooks/03_engine_v2_demo.ipynb v1 vs v2 on the hand-made test profiles, ranges and follow-ups
+ml/recommender_v2.py            engine v2 (readiness, ranges for unknown answers, diversity, target career)
+experiments/                    Phase B no-survey experiments (self_match, weight_sensitivity, masking, summarise)
+docs/results/                   experiment CSVs, README (what each tests + limitations), summary.md
 scripts/inventory_onet.py        lists every O*NET file with rows and columns
 frontend/prototype/pathfinder.html  working browser prototype (engine ported to JavaScript)
 frontend/prototype/engine.js     the JavaScript engine on its own (same results as Python)
 tools/create_career_survey.gs    Google Apps Script that builds the 9-question student survey
 tests/test_baseline_recommender.py  pytest tests with a tiny fake O*NET folder (tests/fake_onet.py)
 tests/test_mysql_matches_files.py   files vs MySQL give identical results (skipped if MySQL is not running)
+tests/test_recommender_v2.py     engine v2 spec tests;  tests/test_experiments.py  experiment scripts on fake data
 database/schema.sql              the 13 MySQL tables (CREATE TABLE IF NOT EXISTS)
+database/migrations/            ALTER scripts for an existing database (002_answer_status.sql)
 backend/db.py                    get_engine() from .env, run_sql_file()
+backend/main.py                  FastAPI app: endpoints, startup data loading (MySQL, else files + memory), CORS
+backend/schemas.py               Pydantic request/response models (validation of 1-5 and answer types)
+backend/repository.py            SqlRepository (MySQL) and MemoryRepository (tests / no-MySQL demo)
+backend/security.py              bcrypt password hashing, JWT create/read
+tests/test_api.py                API tests with fake O*NET + MemoryRepository (one test also on MySQL)
 scripts/load_onet_to_mysql.py    creates the tables and upserts O*NET into them (re-runnable)
 data/raw/onet/                   O*NET text files (not in Git; download separately)
 ```
@@ -80,12 +110,79 @@ data/raw/onet/                   O*NET text files (not in Git; download separate
   shown when IM ≥ 3 and gap > 0.5.
 - Missing values: filled with the career's row mean. Flat answers give a neutral 50. Job Zone filter (≥ 3) for students.
 - Reasons come only from the student's own answers.
-- Known weaknesses: the top 5 can all be in one field (needs diversity re-ranking); preferences/values not in the score;
-  `Recommend Suppress = Y` ratings not filtered; self-rating to level mapping is approximate.
+- Known weaknesses of v1 (addressed in v2): the top 5 can all be in one field; no handling of unknown answers.
+  Still open: preferences/values not in the score; self-rating to level mapping is approximate.
+
+Note: since Oct 2026 `load_onet()` drops `Recommend Suppress = Y` rows, so v1 numbers on real data may differ
+slightly from the ones below (use `load_onet(dir, drop_suppressed=False)` to reproduce them).
 
 Sanity results on real O*NET 31.0 (hand-made profiles, NOT accuracy):
 biology/research profile → Biochemists and Biophysicists 81, Bioinformatics Scientists 80, Medical Scientists 79;
 arts/communication profile → Talent Directors 90, Music Directors and Composers 89, Producers and Directors 88.
+
+## Design decisions v2 (engine v2 spec, follow this in future sessions)
+
+Engine v2 lives in `ml/recommender_v2.py` and reuses the loaders in `ml/baseline_recommender.py`.
+v1 stays: `recommend_v1` / `explain_v1`, with the old names `recommend` / `explain` kept as aliases.
+
+**A1. Inputs (match the survey).** `interests`: 6 RIASEC values, 1-5, always answered.
+`skills`: 8 survey rows; `subjects`: 8 survey rows. Each skill/subject answer is `{"rating": 1-5}`,
+`"no_experience"` / `"not_studied"`, or `"cant_assess"`. `SKILL_MAP_V2` and `SUBJECT_MAP_V2` map rows to O*NET
+element names (check every name exists in the real files; `check_maps()` prints missing ones):
+- Skills: Mathematics -> Mathematics; Programming -> Programming; Problem Solving -> Complex Problem Solving,
+  Critical Thinking; Research -> Science, Active Learning; Communication -> Speaking, Active Listening;
+  Writing -> Writing, Reading Comprehension; Leadership -> Coordination, Persuasion, Negotiation,
+  Management of Personnel Resources; Technical/Practical Skills -> Troubleshooting, Repairing,
+  Equipment Maintenance, Operation and Control.
+- Subjects: Mathematics -> Mathematics; Physics/Chemistry -> Physics, Chemistry; Biology -> Biology;
+  Computer Science -> Computers and Electronics; Commerce/Economics -> Economics and Accounting;
+  Languages -> English Language, Foreign Language; Social Sciences -> Sociology and Anthropology, Psychology,
+  History and Archeology, Geography; Arts/Design -> Fine Arts, Design.
+- A merged row gives the same answer to every element it maps to. An element in two rows uses the mean of the
+  known answers. Only mapped elements are scored; unmapped O*NET elements are outside the questionnaire (not "unknown").
+
+**A2. Data cleaning on load.** Rating rows with `Recommend Suppress = "Y"` are ignored (in `load_onet()`, so the
+MySQL loader stores the cleaned values and the files-vs-MySQL test stays equal). Job Zone >= 3 filter for students.
+
+**A3. Interest fit.** Pearson on RIASEC OI scores, part = (r + 1) / 2. Flat answers give 0.5.
+
+**A4. Readiness** (skills and subjects separately). For each mapped element with importance IM and required level LV:
+w = (IM - 1) / 4; student level L = (rating - 1) / 4 x 7; no_experience / not_studied -> L = 0;
+met = 1 - max(0, LV - L) / 7; readiness = sum(w x met) / sum(w). A surplus never lowers the score.
+
+**A5. Unknowns (`cant_assess`) give a range.** Lower bound: unknown -> L = 0. Upper bound: unknown -> met = 1.
+Unknowns are never dropped from the denominator. Match low/high = (0.25 interest + 0.30 skill readiness +
+0.15 subject readiness) / 0.70 x 100 (weights in one constant). **Rank by the lower bound**, so a missing answer
+can never push a career up.
+
+**A6. Coverage and display.** Coverage = sum(w of known elements) / sum(w of all mapped elements).
+Critical unknown = unknown element with IM >= 4. Display (constants at the top of the file):
+unknown share <= 20% and no critical unknown -> "score"; 20-50% or any critical unknown -> "range" + up to 3
+follow-up questions (survey rows ordered by sum of w x (upper - lower) of their elements); > 50% -> "withheld"
+(show interest fit only).
+
+**A7. Field diversity.** Field = SOC major group (first 2 digits, `SOC_MAJOR_GROUPS`). At most 2 careers per field
+in the top 5 (greedy re-rank, then fill the rest normally).
+
+**A8. Functions.** `recommend_v2(student, data, top_n=10, min_job_zone=3, diversity=True)` -> DataFrame with code,
+career, field, interest_fit, skill_low, skill_high, subject_low, subject_high, match_low, match_high, coverage,
+critical_unknowns, display, follow_ups. `explain_v2(student, data, code)` -> reasons (only from the student's own
+answers, ranked per career, max 2 interest, 2 skill, 2 subject; an interest reason needs the career's own OI >= 4) and gaps (gap = LV - L, shown if IM >= 3 and
+gap > 0.5, priority = IM x gap; no_experience gaps labelled "start from scratch"; unknown elements listed as
+"not assessed - answer to check"). `target_career(student, data, code)` -> questions needed (mapped rows whose
+elements have IM >= 3 and are unanswered/unknown), readiness range, gaps, interest fit check, up to 5 nearby
+alternatives (`Related Occupations.txt` if its columns are usable, else nearest careers by profile).
+
+**A9. Tests** in `tests/test_recommender_v2.py` (fake O*NET helper): surplus never lowers readiness;
+cant_assess never raises match_low and match_low <= match_high; all rated -> low == high and coverage 1;
+no_experience lowers readiness vs rating 3 and gives a "start from scratch" gap; unknowns stay in the
+denominator (manual calculation); diversity max 2 per field in the top 5; suppressed rows ignored; display
+thresholds; matching profile ranks first; flat interests -> 0.5; all v1 tests still pass.
+Demo: `notebooks/03_engine_v2_demo.ipynb` (hand-made test profiles, not real students).
+
+**Phase B results (one line):** experiment scripts written and tested on fake data only; NOT yet run on real
+O*NET 31.0 (download blocked in the dev session), so there are no numbers yet. Run them locally
+(`docs/results/README.md`), then replace this line with the main numbers from `docs/results/summary.md`.
 
 ## Database (MySQL, 13 tables, from the ER diagram; built in `database/schema.sql`)
 
@@ -98,7 +195,7 @@ arts/communication profile → Talent Directors 90, Music Directors and Composer
 |---|---|
 | student | student_id PK, name, email, password_hash, education_level, degree, year_of_study |
 | assessment | assessment_id PK, student_id FK, completed_at |
-| assessment_rating | assessment_id FK, category, item, rating (1–5) |
+| assessment_rating | assessment_id FK, category, item, rating (1–5, NULL if not rated), answer_status (rated / no_experience / not_studied / cant_assess) |
 | recommendation | rec_id PK, student_id FK, career_id FK, assessment_id FK, match_score, reasons, model_version, created_at |
 | career | career_id PK, onet_code, title, description, domain, job_zone, source |
 | skill | skill_id PK, name, category |
@@ -113,7 +210,9 @@ arts/communication profile → Talent Directors 90, Music Directors and Composer
 ## Roadmap (next tasks, in order)
 
 1. ~~MySQL~~ done; confirm on the real data: run the loader, then `pytest -q -rs` (expect 910 ranked careers).
-2. **FastAPI** in `backend/`: `POST /assessment`, `POST /recommend`, `GET /careers/{id}`; save recommendations; Swagger at `/docs`.
+1b. Engine v2 + no-survey experiments (Phase A + B, spec above).
+2. ~~FastAPI~~ done (`uvicorn backend.main:app --reload`, Swagger at `/docs`). `GET /recommend` saves rows with `model_version = "v2"`
+   and `match_score` = the lower bound. Withheld careers return `match_low = null` (interest fit only).
 3. **Frontend**: prototype calls the API; then React with the same screens.
 4. **Survey** (Google Form from `tools/create_career_survey.gs`, 1st–3rd year students): analysis notebook;
    map form answers to engine input (form has 6 interest rows, 8 skills, 8 subjects incl. merged

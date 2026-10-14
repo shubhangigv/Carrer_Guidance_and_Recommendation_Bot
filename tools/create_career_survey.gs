@@ -8,10 +8,14 @@ function createCareerSurvey() {
   form.setDescription(
     'We are final-year students building an AI career guidance system. ' +
     'This anonymous survey has 9 short questions and takes about 3 minutes. ' +
-    'No name or email is collected. Answers are used only for our college project.');
+    'No name or email is collected. Answers are used only for our college project.\n\n' +
+    'Consent: by submitting this form you agree that your anonymous answers may be used ' +
+    'for this college project. You can stop at any time before submitting.');
   form.setCollectEmail(false);
 
-  var scale = ['1 (Low)', '2', '3', '4', '5 (High)'];
+  // The same 1-5 scale everywhere, with anchors so every student reads it the same way.
+  var scale = ['1', '2', '3', '4', '5'];
+  var anchors = '1 = never done it / very weak, 3 = can do it with help, 5 = can do it well on my own.';
 
   // 1. Background
   form.addMultipleChoiceItem()
@@ -36,7 +40,7 @@ function createCareerSurvey() {
 
   // 4. Guidance gap (proves the problem)
   form.addMultipleChoiceItem()
-    .setTitle('4. Have you ever taken help from a career counsellor?')
+    .setTitle('4. Have you used a career counsellor?')
     .setChoiceValues(['Yes, and it helped', "Yes, but it didn't help much",
                       'No, never', "No, it wasn't available to me"])
     .setRequired(true);
@@ -44,6 +48,7 @@ function createCareerSurvey() {
   // 5. Interest profile: one row per RIASEC type (R, I, A, S, E, C)
   form.addGridItem()
     .setTitle('5. How much do you enjoy these activities?')
+    .setHelpText('1 = not at all, 3 = it is okay, 5 = I enjoy it a lot.')
     .setRows(['Working with machines, tools or building things',
               'Solving problems, research and analysing data',
               'Designing, writing or creating things',
@@ -53,20 +58,25 @@ function createCareerSurvey() {
     .setColumns(scale)
     .setRequired(true);
 
-  // 6. Skill profile (names match the recommender's SKILL_MAP)
+  // 6. Skill profile (row names match SKILL_MAP_V2 in ml/recommender_v2.py).
+  //    "No experience" = the student has never tried it (engine level 0).
+  //    "Can't assess"  = the student does not know (engine shows a score range instead).
   form.addGridItem()
-    .setTitle('6. Rate your current ability in these skills (1 = beginner, 5 = very advanced)')
+    .setTitle('6. Rate your current ability in these skills')
+    .setHelpText(anchors + ' Choose "No experience" if you have never tried it, ' +
+                 'or "Can\'t assess" if you are not sure how good you are.')
     .setRows(['Mathematics', 'Programming', 'Problem Solving', 'Research',
               'Communication', 'Writing', 'Leadership', 'Technical/Practical Skills'])
-    .setColumns(scale)
+    .setColumns(scale.concat(['No experience', "Can't assess"]))
     .setRequired(true);
 
-  // 7. Subject profile
+  // 7. Subject profile (row names match SUBJECT_MAP_V2 in ml/recommender_v2.py)
   form.addGridItem()
-    .setTitle('7. How much do you enjoy and do well in these subjects?')
+    .setTitle('7. How good are you at these subjects?')
+    .setHelpText(anchors + ' Choose "Not studied" if you have not studied the subject.')
     .setRows(['Mathematics', 'Physics/Chemistry', 'Biology', 'Computer Science',
               'Commerce/Economics', 'Languages', 'Social Sciences', 'Arts/Design'])
-    .setColumns(scale)
+    .setColumns(scale.concat(['Not studied']))
     .setRequired(true);
 
   // 8. Aimed career field (used to evaluate the recommender, not as training labels)
@@ -81,7 +91,7 @@ function createCareerSurvey() {
 
   // 9. Demand for the system
   form.addMultipleChoiceItem()
-    .setTitle('9. Would you use a free AI tool that suggests careers and explains why they suit you?')
+    .setTitle('9. Would you use an AI career guidance tool?')
     .setChoiceValues(['Yes', 'Maybe', 'No'])
     .setRequired(true);
 
