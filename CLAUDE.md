@@ -32,7 +32,7 @@ give Windows PowerShell commands, and say how to run and verify it.
 | `assessment_rating.answer_status` (migration `database/migrations/002_answer_status.sql`) | DONE |
 | Engine v2 (`ml/recommender_v2.py`, spec in "Design decisions v2"), tests, notebook 03 | DONE (verify on real O*NET) |
 | No-survey experiments (`experiments/`, results in `docs/results/`) | Scripts DONE, NOT run on real O*NET yet |
-| FastAPI backend (`backend/main.py`) | NOT done |
+| FastAPI backend (`backend/main.py`, tests in `tests/test_api.py`) | DONE (test by hand in /docs) |
 | Prototype calls the API, `engine.js` v2 | NOT done |
 | Survey sent, survey analysis, ML comparison | NOT done (no survey data yet) |
 
@@ -49,7 +49,7 @@ give Windows PowerShell commands, and say how to run and verify it.
 | Language | Python 3.13 (Windows, VS Code, `.venv`) |
 | Data / ML | pandas, NumPy, scikit-learn; later XGBoost, sentence-transformers |
 | Database | **MySQL + MySQL Workbench**, SQLAlchemy + PyMySQL (`backend/db.py`, settings from `.env`) |
-| Backend | FastAPI (planned) |
+| Backend | FastAPI (`backend/main.py`), bcrypt (not passlib), PyJWT; secret + expiry from `.env` |
 | Frontend | React (planned); a working single-file prototype exists |
 | Data source | O*NET 31.0 (Aug 2026, CC BY 4.0); later ESCO v1.2.1 and India's NCO-2015 via ISCO-08 codes |
 
@@ -77,6 +77,11 @@ tests/test_recommender_v2.py     engine v2 spec tests;  tests/test_experiments.p
 database/schema.sql              the 13 MySQL tables (CREATE TABLE IF NOT EXISTS)
 database/migrations/            ALTER scripts for an existing database (002_answer_status.sql)
 backend/db.py                    get_engine() from .env, run_sql_file()
+backend/main.py                  FastAPI app: endpoints, startup data loading (MySQL, else files + memory), CORS
+backend/schemas.py               Pydantic request/response models (validation of 1-5 and answer types)
+backend/repository.py            SqlRepository (MySQL) and MemoryRepository (tests / no-MySQL demo)
+backend/security.py              bcrypt password hashing, JWT create/read
+tests/test_api.py                API tests with fake O*NET + MemoryRepository (one test also on MySQL)
 scripts/load_onet_to_mysql.py    creates the tables and upserts O*NET into them (re-runnable)
 data/raw/onet/                   O*NET text files (not in Git; download separately)
 ```
@@ -206,7 +211,8 @@ O*NET 31.0 (download blocked in the dev session), so there are no numbers yet. R
 
 1. ~~MySQL~~ done; confirm on the real data: run the loader, then `pytest -q -rs` (expect 910 ranked careers).
 1b. Engine v2 + no-survey experiments (Phase A + B, spec above).
-2. **FastAPI** in `backend/`: `POST /assessment`, `POST /recommend`, `GET /careers/{id}`; save recommendations; Swagger at `/docs`.
+2. ~~FastAPI~~ done (`uvicorn backend.main:app --reload`, Swagger at `/docs`). `GET /recommend` saves rows with `model_version = "v2"`
+   and `match_score` = the lower bound. Withheld careers return `match_low = null` (interest fit only).
 3. **Frontend**: prototype calls the API; then React with the same screens.
 4. **Survey** (Google Form from `tools/create_career_survey.gs`, 1st–3rd year students): analysis notebook;
    map form answers to engine input (form has 6 interest rows, 8 skills, 8 subjects incl. merged
