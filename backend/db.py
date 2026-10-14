@@ -17,6 +17,7 @@ from sqlalchemy.engine import URL
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_FILE = PROJECT_ROOT / "database" / "schema.sql"
+MIGRATIONS_DIR = PROJECT_ROOT / "database" / "migrations"
 
 load_dotenv(PROJECT_ROOT / ".env")
 
@@ -49,3 +50,16 @@ def run_sql_file(engine, path=SCHEMA_FILE):
     with engine.begin() as conn:
         for statement in statements:
             conn.execute(text(statement))
+
+
+def update_schema(engine):
+    """Create missing tables, then run every migration in database/migrations/ in name order.
+
+    CREATE TABLE IF NOT EXISTS never changes a table that already exists, so a database made with an
+    older schema.sql needs the migrations (e.g. 002 adds assessment_rating.answer_status). Every
+    migration checks what is already there first, so running them again is safe.
+    """
+    run_sql_file(engine, SCHEMA_FILE)
+    for path in sorted(MIGRATIONS_DIR.glob("*.sql")):
+        run_sql_file(engine, path)
+

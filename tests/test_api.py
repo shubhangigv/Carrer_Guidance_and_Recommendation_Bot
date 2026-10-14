@@ -198,10 +198,25 @@ def test_target_questions_and_target(client, ctx):
     assert all(a["code"] != LAB for a in t["alternatives"])
 
 
+# assessment_rating as Phase 1 created it (before migration 002 added answer_status)
+PHASE1_ASSESSMENT_RATING = """
+    CREATE TABLE assessment_rating (
+        assessment_id INT UNSIGNED NOT NULL, category VARCHAR(20) NOT NULL, item VARCHAR(100) NOT NULL,
+        rating TINYINT UNSIGNED NOT NULL,
+        PRIMARY KEY (assessment_id, category, item),
+        CONSTRAINT ck_assessment_rating_range CHECK (rating BETWEEN 1 AND 5),
+        CONSTRAINT fk_assessment_rating_assessment FOREIGN KEY (assessment_id)
+            REFERENCES assessment (assessment_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"""
+
+
 # ---------------------------------------------------------------- the same flow on real MySQL
-def test_flow_with_mysql_repository(onet_dir, onet):
+@pytest.mark.parametrize("old_database", [False, True], ids=["new-database", "phase1-database"])
+def test_flow_with_mysql_repository(onet_dir, onet, old_database):
+    """old_database: the tables were made by the Phase 1 schema, then the loader is re-run.
+    The loader must apply the migrations, otherwise saving a "cant_assess" answer fails (HTTP 500)."""
     sqlalchemy = pytest.importorskip("sqlalchemy")
-    from backend.db import get_engine
+    from backend.db import get_engine, run_sql_file
     from load_onet_to_mysql import load
     db = os.getenv("MYSQL_TEST_DATABASE", "career_guidance_test")
     try:
@@ -213,6 +228,11 @@ def test_flow_with_mysql_repository(onet_dir, onet):
         pytest.skip(f"MySQL not reachable ({type(err).__name__})")
     engine = get_engine(db)
     try:
+        if old_database:
+            run_sql_file(engine)
+            with engine.begin() as conn:
+                conn.execute(sqlalchemy.text("DROP TABLE assessment_rating"))
+                conn.execute(sqlalchemy.text(PHASE1_ASSESSMENT_RATING))
         load(engine, onet_dir)
         repo = SqlRepository(engine)
         ctx = AppContext(onet, repo, repo.career_ids(onet), "mysql")
