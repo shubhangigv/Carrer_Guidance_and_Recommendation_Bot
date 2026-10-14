@@ -27,7 +27,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from backend import schemas
-from backend.db import PROJECT_ROOT, get_engine
+from backend.db import PROJECT_ROOT, get_engine, update_schema
 from backend.repository import EmailTaken, MemoryRepository, SqlRepository
 from backend.security import create_token, expire_minutes, hash_password, read_token, verify_password
 from ml.recommender_v2 import (add_extras, explain_v2, field_of, load_from_mysql, load_onet_v2,
@@ -64,6 +64,7 @@ def build_context():
             loaded = conn.execute(text("SELECT COUNT(*) FROM career")).scalar()
         if not loaded:
             raise RuntimeError("the career table is empty - run scripts/load_onet_to_mysql.py")
+        update_schema(engine)                 # bring a database made with an older schema.sql up to date
         data = load_from_mysql(engine)
         if any(ONET_DIR.rglob("*.txt")):
             add_extras(data, ONET_DIR)        # alternate titles and related occupations come from files

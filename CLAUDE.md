@@ -77,8 +77,9 @@ tests/test_baseline_recommender.py  pytest tests with a tiny fake O*NET folder (
 tests/test_mysql_matches_files.py   files vs MySQL give identical results (skipped if MySQL is not running)
 tests/test_recommender_v2.py     engine v2 spec tests;  tests/test_experiments.py  experiment scripts on fake data
 database/schema.sql              the 13 MySQL tables (CREATE TABLE IF NOT EXISTS)
-database/migrations/            ALTER scripts for an existing database (002_answer_status.sql)
-backend/db.py                    get_engine() from .env, run_sql_file()
+database/migrations/            ALTER scripts for an existing database (002_answer_status.sql); applied automatically
+                                 by update_schema() (loader + API startup), so each must be safe to run again
+backend/db.py                    get_engine() from .env, run_sql_file(), update_schema() (schema.sql + all migrations)
 backend/main.py                  FastAPI app: endpoints, startup data loading (MySQL, else files + memory), CORS
 backend/schemas.py               Pydantic request/response models (validation of 1-5 and answer types)
 backend/repository.py            SqlRepository (MySQL) and MemoryRepository (tests / no-MySQL demo)

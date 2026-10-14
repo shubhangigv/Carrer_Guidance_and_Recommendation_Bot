@@ -1,7 +1,8 @@
 """Copy the O*NET data the engine uses into MySQL.
 
 What it does:
-  1. Creates the 13 tables from database/schema.sql (safe if they already exist).
+  1. Creates the 13 tables from database/schema.sql and applies database/migrations/ (safe to repeat),
+     so a database made with an older schema is brought up to date.
   2. Reads O*NET with the engine's own load_onet(), so MySQL gets exactly the values the engine uses.
   3. Fills career, skill, interest, knowledge, career_skill, career_interest and career_knowledge.
 
@@ -20,7 +21,7 @@ from sqlalchemy import text
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
-from backend.db import get_engine, run_sql_file  # noqa: E402
+from backend.db import get_engine, update_schema  # noqa: E402
 from ml.baseline_recommender import RIASEC, SOC_MAJOR_GROUPS, _read, load_onet  # noqa: E402
 
 ONET_DIR = PROJECT_ROOT / "data" / "raw" / "onet"
@@ -73,7 +74,7 @@ def load(engine, onet_dir=ONET_DIR):
     data = load_onet(onet_dir)   # already drops Recommend Suppress = "Y" rows, so MySQL stores clean values
     _check_two_decimals(data)
 
-    run_sql_file(engine)
+    update_schema(engine)        # tables + migrations, so an older database is brought up to date
 
     occ = data["occupations"]
     job_zone = data.get("job_zone", pd.Series(dtype=float))
