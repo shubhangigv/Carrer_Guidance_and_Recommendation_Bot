@@ -2,7 +2,8 @@
 
 Run (PowerShell, project root, .venv active):
     uvicorn backend.main:app --reload
-Then open http://127.0.0.1:8000/docs to try every endpoint in the browser.
+Then open http://127.0.0.1:8000/app/ for the student web app (frontend/app/),
+or http://127.0.0.1:8000/docs to try every endpoint in the browser.
 
 At startup the O*NET data is loaded ONCE: from MySQL if it is running and filled
 (scripts/load_onet_to_mysql.py), otherwise from the files in data/raw/onet/. Students,
@@ -20,7 +21,9 @@ from pathlib import Path
 import jwt
 from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from backend import schemas
@@ -34,6 +37,7 @@ log = logging.getLogger("pathfinder")
 MODEL_VERSION = "v2"
 MIN_JOB_ZONE = 3
 ONET_DIR = Path(os.getenv("PATHFINDER_ONET_DIR", PROJECT_ROOT / "data" / "raw" / "onet"))
+FRONTEND_DIR = PROJECT_ROOT / "frontend" / "app"
 
 
 # ---------------------------------------------------------------- what the endpoints need
@@ -277,3 +281,16 @@ def target(career_id: int, body: schemas.TargetIn, student_id: int = Depends(cur
             "questions_needed": _question_fields(t["questions_needed"]),
             "alternatives": [{**a, "career_id": ctx.career_ids[a["code"]]}
                              for a in t["alternatives"] if a["code"] in ctx.career_ids]}
+
+
+# ---------------------------------------------------------------- student web app
+# The student app (frontend/app/) is served by this same server at /app/, so the page and the API
+# share one address: no CORS problems and only one thing to start. Mounted last so it never hides an endpoint.
+@app.get("/", include_in_schema=False)
+def home():
+    return RedirectResponse("/app/")
+
+
+if FRONTEND_DIR.is_dir():
+    app.mount("/app", StaticFiles(directory=FRONTEND_DIR, html=True), name="app")
+

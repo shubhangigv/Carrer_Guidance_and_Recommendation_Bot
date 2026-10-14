@@ -18,7 +18,8 @@ from the student's own answers, finds skill gaps, and builds a learning roadmap.
 | Engine v2: readiness, score ranges for unknown answers, field diversity (`ml/recommender_v2.py`) | Done (verify on real O*NET) |
 | No-survey experiments (`experiments/`, `docs/results/`) | Scripts done; run them on real O*NET (see `docs/results/README.md`) |
 | FastAPI backend: auth, assessment, recommendations, search, target career (`backend/main.py`) | Done |
-| Prototype connected to the API, `engine.js` v2, React | Not done (24-31 Oct) |
+| Student web app connected to the API (`frontend/app/`, served at `/app/`) | Done |
+| React version of the app | Not done |
 | ML comparison, Sentence-BERT, hybrid ranking | After survey data |
 | ESCO, NCO-2015, jobs, resume analyser, RAG chatbot | Later |
 
@@ -55,6 +56,14 @@ https://www.onetcenter.org/dl_files/database/db_31_0_text.zip and extract it int
 5. `GET /health` shows where the data comes from: `"data_source": "mysql"` (O*NET loaded into MySQL) or
    `"files"` (MySQL not running or empty; then accounts and answers are kept in memory and lost on restart).
 
+### Student web app (Phase 3a)
+
+With the server running, open **http://127.0.0.1:8000/app/** (or just http://127.0.0.1:8000/).
+Sign up → 4-step assessment (6 interests, 8 skills, 8 subjects, review) → top 10 matches with reasons →
+career details (readiness, skill gaps, similar careers) → career search. Everything is saved in MySQL.
+The page has no engine of its own: `frontend/app/api.js` holds every API call, `app.js` the screens,
+`styles.css` the look (same as the prototype). `frontend/prototype/` stays as the offline v1 demo.
+
 | Endpoint | Login? | What it does |
 |---|---|---|
 | `POST /auth/register`, `POST /auth/login` | no | create an account (bcrypt-hashed password), get a token |
@@ -77,7 +86,7 @@ https://www.onetcenter.org/dl_files/database/db_31_0_text.zip and extract it int
 | No-survey experiments | see `docs/results/README.md` (`python experiments\self_match.py` etc.) |
 | Prototype | open `frontend/prototype/pathfinder.html` in a browser; load `docs/careers.json` (made by notebook 02's last cell) in the Data tab for real data |
 | Load O*NET into MySQL | `python scripts\load_onet_to_mysql.py` |
-| API | `uvicorn backend.main:app --reload`, then open http://127.0.0.1:8000/docs |
+| API + student app | `uvicorn backend.main:app --reload`, then open http://127.0.0.1:8000/app/ (app) or /docs (Swagger) |
 | Tests | `pip install -r requirements-dev.txt` then `pytest -q -rs` (MySQL tests are skipped if MySQL is not running) |
 | Create the survey | paste `tools/create_career_survey.gs` into script.google.com and run it |
 
