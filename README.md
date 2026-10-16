@@ -115,6 +115,7 @@ The page has no engine of its own: `frontend/app/api.js` holds every API call; o
 | Load O*NET into MySQL | `python scripts\load_onet_to_mysql.py` |
 | API + student app | `uvicorn backend.main:app --reload`, then open http://127.0.0.1:8000/app/ (app) or /docs (Swagger) |
 | Tests | `pip install -r requirements-dev.txt` then `pytest -q -rs` (MySQL tests are skipped if MySQL is not running) |
+| Survey results | save the form's CSV as `data\raw\survey\responses.csv`, then see `docs/results/survey/README.md` |
 | Create the survey | paste `tools/create_career_survey.gs` into script.google.com and run it |
 
 ## How the baseline works
