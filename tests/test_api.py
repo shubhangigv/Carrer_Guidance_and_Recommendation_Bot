@@ -268,7 +268,8 @@ def test_web_app_is_served(client):
     assert page.status_code == 200 and "Pathfinder" in page.text
     for name in ("api.js", "core.js", "account.js", "quiz.js", "matches.js", "career.js", "roadmap.js",
                  "explore.js", "assistant.js", "styles.css"):
-        assert client.get(f"/app/{name}").status_code == 200, name
+        r = client.get(f"/app/{name}")
+        assert r.status_code == 200 and r.headers["cache-control"] == "no-cache", name
         assert f'src="{name}"' in page.text or name == "styles.css", f"{name} is not loaded by index.html"
 
 

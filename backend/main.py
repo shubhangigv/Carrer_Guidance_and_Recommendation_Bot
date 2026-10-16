@@ -96,6 +96,16 @@ app.add_middleware(CORSMiddleware, allow_origins=["null"],
                    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
                    allow_methods=["*"], allow_headers=["*"])
 
+@app.middleware("http")
+async def no_stale_app_files(request, call_next):
+    """Ask browsers to re-check the web app files on every load, so an update (git pull) is never hidden
+    behind an old cached styles.css or app script. The files are small and come from this same PC."""
+    response = await call_next(request)
+    if request.url.path == "/app" or request.url.path.startswith("/app/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
 app.include_router(explore.router)
 app.include_router(roadmap.router)
 app.include_router(assistant.router)
