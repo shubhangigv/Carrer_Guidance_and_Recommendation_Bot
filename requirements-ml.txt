@@ -1,0 +1,4 @@
+# Optional: Sentence-BERT for "describe yourself" matching (large download: PyTorch + ~90 MB model).
+# Without it the app uses TF-IDF word matching. Install with:  pip install -r requirements-ml.txt
+-r requirements.txt
+sentence-transformers

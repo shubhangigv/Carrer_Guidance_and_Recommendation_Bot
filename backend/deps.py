@@ -14,6 +14,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from backend.security import read_token
 from ml.localise import clean_title, industries_of, load_industries, load_salaries, salary_for
+from ml.recommender_v2 import field_of
+from ml.semantic import LazyMatcher, SemanticMatcher
 
 MODEL_VERSION = "v2"
 MIN_JOB_ZONE = 3
@@ -27,6 +29,7 @@ class AppContext:
     data_source: str       # "mysql" or "files"
     industries: list = field(default_factory=load_industries)     # config/industries.csv
     salaries: list = field(default_factory=load_salaries)         # config/salary_india.csv (cited rows only)
+    matcher: object = None     # ml/semantic.py matcher (LazyMatcher at startup; built on first use otherwise)
 
     def __post_init__(self):
         self.codes_by_id = {cid: code for code, cid in self.career_ids.items()}
@@ -51,6 +54,12 @@ class AppContext:
 
     def salary(self, code):
         return salary_for(code, self.industry_ids(code), self.salaries)
+
+    def get_matcher(self, timeout=60):
+        """The "describe yourself" matcher (Sentence-BERT if installed, else TF-IDF)."""
+        if self.matcher is None:
+            self.matcher = SemanticMatcher(self.data)
+        return self.matcher.get(timeout) if isinstance(self.matcher, LazyMatcher) else self.matcher
 
     def job_zone(self, code):
         jz = self.data.get("job_zone", {}).get(code) if "job_zone" in self.data else None
@@ -97,6 +106,14 @@ def optional_student(creds: HTTPAuthorizationCredentials = Depends(bearer)):
 
 
 # ---------------------------------------------------------------- helpers
+def career_brief(ctx, code, matched_title=None):
+    """The short career summary used in lists (search, explore, matches for your words, assistant sources)."""
+    return {"career_id": ctx.career_ids[code], "code": code, "title": ctx.official_title(code),
+            "display_title": ctx.display_title(code), "field": field_of(code), "ranked": code in ctx.ranked,
+            "matched_title": matched_title, "excluded_reason": ctx.excluded_reason(code),
+            "job_zone": ctx.job_zone(code)}
+
+
 def num(x, digits=3):
     """float for JSON; NaN -> None."""
     return None if x is None or (isinstance(x, float) and math.isnan(x)) else round(float(x), digits)
