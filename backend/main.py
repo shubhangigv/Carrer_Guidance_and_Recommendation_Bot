@@ -34,6 +34,7 @@ from backend.repository import EmailTaken, MemoryRepository, SqlRepository
 from backend.routes import assistant, explore, roadmap
 from backend.security import create_token, expire_minutes, hash_password, verify_password
 from ml.localise import apply_local_rules
+from ml.pathways import load_education
 from ml.semantic import LazyMatcher
 from ml.recommender_v2 import (add_extras, explain_v2, field_of, load_from_mysql, load_onet_v2,
                                questions_needed, recommend_v2, target_career)
@@ -64,6 +65,9 @@ def build_context():
         data = load_onet_v2(ONET_DIR)
         repo, source = MemoryRepository(), "files"
     apply_local_rules(data, ONET_DIR if has_files else None)
+    if has_files:
+        data["education"], info = load_education(ONET_DIR)    # O*NET education levels (US), for career pages
+        data["extras_info"].append(info)
     for line in data.get("extras_info", []):
         log.info(line)
     ctx = AppContext(data, repo, repo.career_ids(data), source)

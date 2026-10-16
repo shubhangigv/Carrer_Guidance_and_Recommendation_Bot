@@ -138,7 +138,9 @@ def test_requirements_cover_all_important_elements(data):
 def test_roadmap_orders_skills_by_priority(data):
     student = {k: v for k, v in ANSWERS.items() if k != "preferred_location"}
     plan = roadmap(student, data, LAB, job_zone=4)
-    assert plan["steps"][0]["key"] == "education" and "bachelor" in plan["steps"][0]["detail"]
+    keys = [s["key"] for s in plan["steps"]]
+    assert keys[:2] == ["stream", "education"] and "bachelor" in plan["steps"][1]["detail"]
+    assert "Biology" in plan["steps"][0]["detail"] or "Chemistry" in plan["steps"][0]["detail"]
     build = [s["items"][0]["priority"] for s in plan["steps"] if s["key"].startswith("build:")]
     assert build and build == sorted(build, reverse=True)
     assert [s["key"] for s in plan["steps"]][-2:] == ["experience", "apply"]
@@ -184,3 +186,66 @@ def test_career_detail_has_industries_and_no_invented_salary(client):
     d = client.get(f"/careers/{cid}").json()
     assert d["display_title"] == "Research Scientist" and "science" in d["industries"]
     assert d["salary"] is None                     # config/salary_india.csv has no cited rows
+
+
+# ---------------------------------------------------------------- how to get there (pathway)
+from ml.pathways import career_ladder, courses_for, load_courses, load_education, load_routes, routes_for, suggested_stream  # noqa: E402
+
+
+def test_routes_file_is_well_formed():
+    routes = load_routes()
+    assert len(routes) >= 20
+    for r in routes:
+        assert r["name"] and r["prefixes"] and r["steps"]
+        for st in r["steps"]:
+            assert st["stage"] and st["text"]
+            assert st["link_url"] is None or st["link_url"].startswith("https://")
+    assert [r["id"] for r in routes_for("29-1215.00", routes)] == ["doctor"]
+    assert [r["id"] for r in routes_for("17-2051.00", routes)] == ["engineer"]
+    assert routes_for("99-9999.00", routes) == []
+
+
+def test_suggested_stream_for_lab_scientist(data):
+    s = suggested_stream(data, LAB)                    # strong Biology + Chemistry knowledge
+    assert s["stream"].startswith("Science") and set(s["because"]) & {"Biology", "Chemistry"}
+
+
+def test_courses_need_a_verified_date(tmp_path):
+    f = tmp_path / "courses.csv"
+    f.write_text("element,title,provider,url,cost,language,verified_on\n"
+                 "Programming,Intro to Python,Uni,https://example.org/py,free,English,2026-10-20\n"
+                 "Programming,Unchecked course,X,https://example.org/x,paid,English,\n", encoding="utf-8")
+    courses = load_courses(f)
+    assert [c["title"] for c in courses] == ["Intro to Python"]
+    assert courses_for(["programming", "Biology"], courses) == {"programming": courses}
+
+
+def test_education_levels_from_onet_file(onet_dir):
+    import pandas as pd
+    pd.DataFrame({"O*NET-SOC Code": [LAB] * 3, "Element ID": "2.D.1", "Element Name": "Required Level of Education",
+                  "Scale ID": "RL", "Category": ["6", "8", "11"], "Data Value": ["20.5", "50.2", "29.3"],
+                  "Recommend Suppress": "N"}).to_csv(onet_dir / "Education, Training, and Experience.txt", sep="\t", index=False)
+    edu, info = load_education(onet_dir)
+    assert "RL" in info
+    data = {"education": edu}
+    from ml.pathways import education_for
+    assert [e["label"] for e in education_for(data, LAB)] == ["Master's degree", "Doctoral degree", "Bachelor's degree"]
+    assert load_education(onet_dir.parent / "nowhere")[0] is None
+
+
+def test_career_ladder_by_job_zone():
+    import pandas as pd
+    occ = pd.DataFrame({"Title": ["Nurse", "Nursing Assistant", "Nurse Practitioner", "Other"]},
+                       index=["29-1141.00", "29-1149.00", "29-1171.00", "47-0001.00"])
+    data = {"occupations": occ, "job_zone": pd.Series({"29-1141.00": 3, "29-1149.00": 2, "29-1171.00": 5, "47-0001.00": 1}),
+            "related": pd.DataFrame({"code": ["29-1141.00"], "related_code": ["29-1171.00"], "order": [1]})}
+    ladder = career_ladder(data, "29-1141.00")
+    assert [r["code"] for r in ladder["ways_in"]] == ["29-1149.00"]
+    assert ladder["grow_into"][0] == {"code": "29-1171.00", "job_zone": 5, "source": "O*NET related occupation"}
+
+
+def test_pathway_endpoint(client):
+    cid = career_id(client, LAB)
+    p = client.get(f"/careers/{cid}/pathway").json()
+    assert p["display_title"] == "Research Scientist" and p["stream"]["stream"].startswith("Science")
+    assert p["routes"] == [] and p["courses"] == {}          # no route covers 19-0001 in the fake data

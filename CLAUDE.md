@@ -36,6 +36,7 @@ give Windows PowerShell commands, and say how to run and verify it.
 | Student web app on the API (`frontend/app/`, served by FastAPI at `/app/`) | DONE (redesigned 16 Oct: quiz, matches, career, roadmap, explore, assistant) |
 | Short titles + India filter (`ml/localise.py`, `config/`), industries, full requirements + roadmap (`ml/career_needs.py`) | DONE (16 Oct) |
 | Text matching (`ml/semantic.py`: Sentence-BERT if installed, else TF-IDF), Gemini assistant (`backend/assistant.py`) | DONE (needs GEMINI_API_KEY; SBERT optional) |
+| "How to get there": Indian routes (`config/career_paths.csv`), stream, ladder, courses (`ml/pathways.py`, GET /careers/{id}/pathway) | DONE (16 Oct); 28 routes are AI DRAFTS (verified=no) - team must check each on the official site |
 | React version, `engine.js` v2 for the offline prototype | NOT planned |
 | Survey sent, survey analysis, ML comparison | NOT done (no survey data yet) |
 
@@ -80,7 +81,9 @@ ml/career_needs.py               every important O*NET skill/knowledge per caree
 ml/semantic.py                   free text -> careers (Sentence-BERT all-MiniLM-L6-v2 if installed, else TF-IDF); method is reported
 backend/deps.py                  AppContext, login dependency, shared helpers;  backend/routes/  explore, roadmap, assistant endpoints
 backend/assistant.py             RAG chatbot: retrieve careers -> records -> Gemini (GEMINI_API_KEY, GEMINI_MODEL); offline without key
-config/                          india_exclusions.csv, industries.csv, salary_india.csv (only cited numbers) - see config/README.md
+config/                          india_exclusions.csv, industries.csv, salary_india.csv (only cited numbers), career_paths.csv
+                                 (Indian education routes, AI-drafted, verified=no until checked), courses.csv (checked only)
+ml/pathways.py                   routes per career, stream after Class 10, O*NET education shares (US), career ladder, courses
 tests/test_features.py, tests/test_assistant.py   titles, India filter, industries, requirements, roadmap, matcher, chatbot (Gemini mocked)
 tools/create_career_survey.gs    Google Apps Script that builds the 9-question student survey
 tests/test_baseline_recommender.py  pytest tests with a tiny fake O*NET folder (tests/fake_onet.py)

@@ -35,7 +35,8 @@ Rules:
   CAREER RECORDS below. If the records do not contain the answer, say you do not have that information
   and suggest where the student can check (for example official exam or college websites, or job adverts).
 - Never invent numbers: no salaries, fees, cut-offs, exam dates, statistics or college rankings that are
-  not in the records. A record that says "Salary in India: not in our data" means you must not guess one.
+  not in the records. For exams, degrees and courses use the "Indian education route" in the records; if a
+  route is marked NOT yet checked, say so and point to its official website. A record that says "Salary in India: not in our data" means you must not guess one.
 - You may give general counselling advice (how to choose, how to explore, how to build a skill, how to
   talk to parents) without records, but say it is general advice.
 - Do not judge or use gender, religion, caste or family background. Do not discourage any career.
@@ -69,6 +70,15 @@ def career_record(ctx, code, student=None):
              f"Most important skills: {', '.join(skills) or 'not rated'}",
              f"Most important knowledge: {', '.join(knowledge) or 'not rated'}",
              f"Salary in India: {salary_text}"]
+    from ml.pathways import routes_for, suggested_stream
+    stream = suggested_stream(ctx.data, code)
+    if stream and stream["because"]:
+        lines.append(f"Suggested stream after Class 10: {stream['stream']} (uses {', '.join(stream['because'])})")
+    for route in routes_for(code, ctx.routes)[:1]:
+        status = "checked by the team" if route["verified"] else "NOT yet checked - tell the student to confirm on the official site"
+        steps = "; ".join(f"{st['stage']}: {st['text']}" + (f" ({st['link_url']})" if st["link_url"] else "")
+                          for st in route["steps"])
+        lines.append(f"Indian education route '{route['name']}' ({status}): {steps}")
     if ctx.excluded_reason(code):
         lines.append(f"Not recommended in India by Pathfinder: {ctx.excluded_reason(code)}")
     if to_build:

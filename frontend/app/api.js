@@ -56,6 +56,7 @@ const api = {
   searchCareers: (q) => api.call("GET", `/careers/search?q=${encodeURIComponent(q)}&limit=30`),
   career: (id) => api.call("GET", `/careers/${id}`),
   requirements: (id) => api.call("GET", `/careers/${id}/requirements`),
+  pathway: (id) => api.call("GET", `/careers/${id}/pathway`),
   target: (id, assessmentId) => api.call("POST", `/target/${id}`, { assessment_id: assessmentId }),
   industries: () => api.call("GET", "/industries"),
   industry: (id) => api.call("GET", `/industries/${encodeURIComponent(id)}`),

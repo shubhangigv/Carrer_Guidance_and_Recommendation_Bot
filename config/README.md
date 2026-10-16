@@ -25,3 +25,18 @@ Salaries shown on the career page. **Only add numbers from a source you can cite
 government survey or a published salary report), with the source name, link and year; the app shows
 the source next to the number. Rows: `onet_code` (or empty) and `industry_id` (or empty) - a code row
 wins over an industry row. Amounts in lakh per annum (LPA). Leave the file empty rather than guess.
+
+## career_paths.csv
+
+Indian education routes shown on career pages ("How to get there"). One row per step; rows with the same
+`route_id` form one route. `applies_to` uses the same O*NET-SOC prefixes as `industries.csv`.
+The first version was **drafted by Claude (AI) from general knowledge and is marked `verified = no`**:
+the app labels such routes "Not yet checked". Open each official link, check the step is still correct,
+then set `verified` to `yes` on all rows of that route.
+
+## courses.csv
+
+Specific courses shown next to skills to build. **Only add a course after opening the link yourself**,
+and fill `verified_on` (e.g. 2026-10-20); rows without it are ignored. `element` is the O*NET skill or
+knowledge name exactly as shown on the career page (e.g. `Programming`, `Biology`). `cost`: free / paid.
+Until a skill has a checked course, the app shows search links to course sites instead.

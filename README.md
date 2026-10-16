@@ -65,7 +65,7 @@ With the server running, open **http://127.0.0.1:8000/app/** (or just http://127
 |---|---|
 | Quiz `#/quiz` | 24 questions, one at a time (6 interests, 8 skills, 8 subjects, where you want to work, optional "about you") |
 | My matches `#/matches` | top 10 careers from different fields with reasons; plus careers matching your own words (Sentence-BERT or TF-IDF) |
-| Career `#/career/<id>` | description, every important O*NET skill/knowledge (to build / have / check yourself), preparation, salary (only from a cited source), job links for your city, similar careers |
+| Career `#/career/<id>` | description, **how to get there** (Indian route with exams and degree, stream after Class 10, US education shares, ways in / where you can grow), every important O*NET skill/knowledge (to build / have / check yourself), preparation, salary (only from a cited source), job links for your city, similar careers |
 | Roadmap `#/roadmap/<id>` | qualification → skills in priority order → experience → applying; tick steps, progress is saved |
 | Explore `#/explore` | 27 industries (Medicine, Engineering, Beauty & Wellness, Agriculture, Film/Bollywood, …) and search |
 | Ask `#/assistant` | career assistant chat (Gemini, answers only from our career records) |
@@ -78,6 +78,11 @@ The page has no engine of its own: `frontend/app/api.js` holds every API call; o
 * `india_exclusions.csv` – careers never recommended in India (now: gambling jobs), each with a reason.
 * `industries.csv` – the Explore categories (which O*NET codes belong to each).
 * `salary_india.csv` – salaries, **only with a source**; empty until the team adds verified numbers.
+* `career_paths.csv` – Indian education routes (e.g. Class 12 PCB → NEET-UG → MBBS) for 28 career groups, with
+  official links. **Drafted by AI and marked `verified = no`**: the app shows "Not yet checked" until the team
+  checks each route on its official website and sets `verified` to `yes`.
+* `courses.csv` – specific courses per skill; only rows with a `verified_on` date are shown (empty for now;
+  until then each skill shows search links to Coursera, YouTube, SWAYAM and NPTEL).
 
 ### Optional extras
 

@@ -101,10 +101,19 @@ function jobLinks(title, place) {
           ["National Career Service", "https://www.ncs.gov.in/"]];
 }
 const salaryCheckLink = (title) => `https://www.google.com/search?q=${q(title + " salary in India")}`;
+// Search pages on course sites (not specific courses: those come only from config/courses.csv, checked by the team).
 function learnLinks(skill) {
-  return [["Videos", `https://www.youtube.com/results?search_query=${q(skill + " for beginners")}`],
+  return [["Coursera", `https://www.coursera.org/search?query=${q(skill)}`],
+          ["YouTube", `https://www.youtube.com/results?search_query=${q(skill + " for beginners")}`],
           ["SWAYAM (free govt. courses)", "https://swayam.gov.in/"],
           ["NPTEL", "https://nptel.ac.in/"]];
+}
+// Checked courses for one skill, else the search links above.
+function coursesHtml(element, courses) {
+  const list = (courses || {})[element] || [];
+  if (!list.length) return `<span class="faint">Find a course:</span> ${linkList(learnLinks(element))}`;
+  return `<span class="faint">Courses:</span> ${list.map(c => `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title)}</a>` +
+    `<span class="faint"> (${[c.provider, c.cost].filter(Boolean).map(esc).join(", ")})</span>`).join(" · ")}`;
 }
 const linkList = (links) => links.map(([t, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`).join(" · ");
 

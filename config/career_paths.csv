@@ -1,0 +1,74 @@
+route_id,route_name,applies_to,verified,stage,text,link_name,link_url
+doctor,Doctor (MBBS),29-121;29-122;29-124,no,Class 11-12,"Take Science with Physics, Chemistry and Biology (PCB) and English.",,
+doctor,Doctor (MBBS),29-121;29-122;29-124,no,Entrance exam,"Write NEET-UG, the national medical entrance exam conducted by the National Testing Agency (NTA).",NTA,https://nta.ac.in/
+doctor,Doctor (MBBS),29-121;29-122;29-124,no,Degree,"MBBS at a college recognised by the National Medical Commission, including a compulsory internship.",National Medical Commission,https://www.nmc.org.in/
+doctor,Doctor (MBBS),29-121;29-122;29-124,no,After the degree,"To specialise (for example surgery, paediatrics, psychiatry), write NEET-PG and do an MD, MS or DNB.",,
+dentist,Dentist (BDS),29-102,no,Class 11-12,"Take Science with PCB and English.",,
+dentist,Dentist (BDS),29-102,no,Entrance exam,"Write NEET-UG (National Testing Agency).",NTA,https://nta.ac.in/
+dentist,Dentist (BDS),29-102,no,Degree,"BDS at a college recognised by the Dental Council of India, including an internship. An MDS lets you specialise.",Dental Council of India,https://dciindia.gov.in/
+nurse,Nurse (B.Sc Nursing),29-1141;29-1171;29-2061,no,Class 11-12,"Take Science with PCB and English.",,
+nurse,Nurse (B.Sc Nursing),29-1141;29-1171;29-2061,no,Admission,"Admission is through state or institute entrance tests; some colleges use NEET-UG scores. Check each college.",,
+nurse,Nurse (B.Sc Nursing),29-1141;29-1171;29-2061,no,Degree,"B.Sc Nursing (or the shorter GNM diploma) at an institution recognised by the Indian Nursing Council, then register with your State Nursing Council.",Indian Nursing Council,https://www.indiannursingcouncil.org/
+nurse,Nurse (B.Sc Nursing),29-1141;29-1171;29-2061,no,After the degree,"An M.Sc Nursing lets you specialise or teach.",,
+pharmacist,Pharmacist (B.Pharm / D.Pharm),29-1051,no,Class 11-12,"Take Science with Physics, Chemistry and Biology or Maths.",,
+pharmacist,Pharmacist (B.Pharm / D.Pharm),29-1051,no,Degree,"B.Pharm (degree) or D.Pharm (diploma) at an institution approved by the Pharmacy Council of India, then register with your State Pharmacy Council.",Pharmacy Council of India,https://www.pci.nic.in/
+physio,Physiotherapist (BPT),29-1123,no,Class 11-12,"Take Science with PCB.",,
+physio,Physiotherapist (BPT),29-1123,no,Degree,"Bachelor of Physiotherapy (BPT), including a clinical internship. Admission is through state or university entrance tests.",,
+vet,Veterinarian (B.V.Sc),29-1131,no,Class 11-12,"Take Science with PCB.",,
+vet,Veterinarian (B.V.Sc),29-1131,no,Entrance exam,"NEET-UG for the all-India quota, or your state's entrance test for state veterinary colleges.",NTA,https://nta.ac.in/
+vet,Veterinarian (B.V.Sc),29-1131,no,Degree,"B.V.Sc & A.H. (Bachelor of Veterinary Science and Animal Husbandry), including an internship.",,
+engineer,Engineer (B.E. / B.Tech),17-2,no,Class 11-12,"Take Science with Physics, Chemistry and Maths (PCM).",,
+engineer,Engineer (B.E. / B.Tech),17-2,no,Entrance exam,"JEE Main (NTA) for NITs, IIITs and many colleges; JEE Advanced for IITs; or your state's engineering entrance test.",JEE Advanced,https://jeeadv.ac.in/
+engineer,Engineer (B.E. / B.Tech),17-2,no,Degree,"B.E. or B.Tech in the branch you want (civil, mechanical, electrical, chemical ...).",,
+engineer,Engineer (B.E. / B.Tech),17-2,no,Another way in,"After Class 10, a 3-year polytechnic diploma; diploma holders can often join a B.Tech directly in the second year (lateral entry).",,
+engineer,Engineer (B.E. / B.Tech),17-2,no,After the degree,"GATE is used for M.Tech admissions and many public-sector jobs.",,
+technician,Technician (diploma / ITI),17-3;47-2;49,no,After Class 10,"Join an ITI trade course (for example electrician, fitter, mechanic) or a polytechnic diploma.",Directorate General of Training,https://dgt.gov.in/
+technician,Technician (diploma / ITI),17-3;47-2;49,no,Training,"Do an apprenticeship with a company to get on-the-job experience.",Apprenticeship India,https://www.apprenticeshipindia.gov.in/
+software,Software / IT,15-12,no,Class 11-12,"Science with Maths (PCM) is needed for B.Tech; for BCA many colleges accept any stream with Maths.",,
+software,Software / IT,15-12,no,Degree,"B.Tech in Computer Science or IT (through JEE Main or state tests), or BCA / B.Sc Computer Science followed by an MCA.",NTA,https://nta.ac.in/
+software,Software / IT,15-12,no,Build your profile,"Build projects, take part in hackathons and do internships; employers look closely at what you have built.",,
+data,Data science / statistics,15-2,no,Class 11-12,"Take Maths.",,
+data,Data science / statistics,15-2,no,Degree,"B.Sc or B.Tech in Statistics, Maths or Computer Science; a master's degree helps for research roles.",,
+data,Data science / statistics,15-2,no,Build your profile,"Learn programming (Python or R) and statistics, and do projects with real data.",,
+lawyer,Lawyer (LLB),23-10,no,Class 11-12,"Any stream.",,
+lawyer,Lawyer (LLB),23-10,no,Entrance exam,"CLAT for the National Law Universities (other tests such as AILET are used by some universities).",Consortium of NLUs,https://consortiumofnlus.ac.in/
+lawyer,Lawyer (LLB),23-10,no,Degree,"A 5-year integrated BA LLB (or BBA LLB) after Class 12, or a 3-year LLB after any graduation.",,
+lawyer,Lawyer (LLB),23-10,no,After the degree,"Enrol with a State Bar Council and pass the All India Bar Examination to practise. Judicial services exams lead to becoming a judge.",Bar Council of India,https://www.barcouncilofindia.org/
+ca,Chartered Accountant (CA),13-2011,no,Class 11-12,"Commerce is the usual stream, but any stream can register.",,
+ca,Chartered Accountant (CA),13-2011,no,Professional course,"Register with ICAI and clear CA Foundation, CA Intermediate, practical training (articleship) and CA Final.",ICAI,https://www.icai.org/
+ca,Chartered Accountant (CA),13-2011,no,Other options,"B.Com, then roles in accounting; related professional courses: Company Secretary (ICSI) and Cost and Management Accountant (ICMAI).",ICSI,https://www.icsi.edu/
+manager,Manager (MBA),11-1;11-2;11-3;13-1,no,Degree,"Any bachelor's degree (BBA, B.Com, B.Tech, BA ...).",,
+manager,Manager (MBA),11-1;11-2;11-3;13-1,no,Entrance exam,"CAT for the IIMs and many business schools; other schools use their own tests.",CAT,https://iimcat.ac.in/
+manager,Manager (MBA),11-1;11-2;11-3;13-1,no,After the degree,"MBA or PGDM, ideally after some work experience; most managers first work in the field they later manage.",,
+designer,Designer (B.Des),27-102,no,Class 11-12,"Any stream.",,
+designer,Designer (B.Des),27-102,no,Entrance exam,"NIFT entrance (fashion), NID DAT, UCEED (IIT Bombay) and university design tests.",NIFT,https://www.nift.ac.in/
+designer,Designer (B.Des),27-102,no,Degree,"B.Des in your area (fashion, communication, interior, product).",NID,https://www.nid.edu/
+designer,Designer (B.Des),27-102,no,Build your profile,"Build a portfolio of your work; it matters as much as the degree.",,
+architect,Architect (B.Arch),17-101,no,Class 11-12,"Take Physics, Chemistry and Maths.",,
+architect,Architect (B.Arch),17-101,no,Entrance exam,"NATA (Council of Architecture) or JEE Main Paper 2.",NATA,https://www.nata.in/
+architect,Architect (B.Arch),17-101,no,Degree,"B.Arch, then register with the Council of Architecture to practise.",Council of Architecture,https://www.coa.gov.in/
+film,"Film, TV and acting",27-201;27-403,no,Training,"Theatre groups, acting or film workshops, and film institutes such as FTII (Pune), SRFTI (Kolkata) and the National School of Drama (theatre).",FTII,https://www.ftii.ac.in/
+film,"Film, TV and acting",27-201;27-403,no,Degree (optional),"Degrees in mass communication, film studies or performing arts help but are not required.",NSD,https://nsd.gov.in/
+film,"Film, TV and acting",27-201;27-403,no,Build your profile,"Assist on sets, make short films, build a showreel and audition regularly.",,
+media,Journalism and media,27-302;27-304,no,Degree,"BA in Journalism and Mass Communication (BJMC), or any degree followed by a diploma such as the one at IIMC.",IIMC,https://iimc.gov.in/
+media,Journalism and media,27-302;27-304,no,Build your profile,"Write regularly, intern with newspapers, channels or websites, and keep a portfolio of published work.",,
+chef,Chef / hotel management,35-1011;35-2014;11-9051;11-9081,no,Class 11-12,"Any stream.",,
+chef,Chef / hotel management,35-1011;35-2014;11-9051;11-9081,no,Entrance exam,"NCHM JEE (conducted by NTA) for the Institutes of Hotel Management; private institutes have their own admission.",NCHM,https://nchm.nic.in/
+chef,Chef / hotel management,35-1011;35-2014;11-9051;11-9081,no,Degree,"B.Sc in Hospitality and Hotel Administration, or a diploma in culinary arts; then kitchen or hotel training.",,
+teacher,School teacher (B.Ed),25-2,no,Degree,"A bachelor's degree in the subject you want to teach, then a B.Ed; or an integrated teacher-education programme after Class 12.",NCTE,https://ncte.gov.in/
+teacher,School teacher (B.Ed),25-2,no,Eligibility test,"Clear CTET (central schools) or your state's TET to teach in schools.",CTET,https://ctet.nic.in/
+professor,College teacher / professor,25-1,no,Degree,"A master's degree in your subject.",,
+professor,College teacher / professor,25-1,no,Eligibility test,"Clear UGC-NET (conducted by NTA) and/or complete a PhD.",NTA,https://nta.ac.in/
+psychologist,Psychologist / counsellor,19-303;21-101,no,Degree,"BA or B.Sc in Psychology, then an MA or M.Sc in Psychology.",,
+psychologist,Psychologist / counsellor,19-303;21-101,no,Professional training,"Clinical psychologists need a programme recognised by the Rehabilitation Council of India (RCI) and RCI registration.",RCI,https://rehabcouncil.nic.in/
+socialwork,Social worker,21-102,no,Degree,"BSW (Bachelor of Social Work), then an MSW for most professional roles.",,
+police,Police and civil services,33-3;33-1,no,Entrance exam,"State police recruitment exams (constable after Class 12, sub-inspector after graduation); IPS through the UPSC Civil Services Examination after graduation.",UPSC,https://upsc.gov.in/
+defence,Armed forces,55,no,After Class 12,"NDA examination (UPSC) after Class 12; CDS examination (UPSC) after graduation; technical and other entries are listed on the official recruitment sites.",Join Indian Army,https://joinindianarmy.nic.in/
+pilot,Pilot (CPL),53-201,no,Class 11-12,"Take Physics and Maths.",,
+pilot,Pilot (CPL),53-201,no,Training,"Pass the DGCA medical, train at a DGCA-approved flying school and earn a Commercial Pilot Licence (CPL).",DGCA,https://www.dgca.gov.in/
+agriculture,Agriculture,19-101;45-2;11-9013,no,Class 11-12,"Science with Biology or Maths (some states also offer Agriculture as a subject).",,
+agriculture,Agriculture,19-101;45-2;11-9013,no,Degree,"B.Sc Agriculture (or Horticulture, Food Technology) at an agricultural university; admission through CUET-UG for ICAR seats or state tests (check ICAR).",ICAR,https://icar.org.in/
+agriculture,Agriculture,19-101;45-2;11-9013,no,Short courses,"Farmers can learn new methods through Krishi Vigyan Kendra trainings in their district.",,
+beauty,Beauty and wellness,39-50,no,After Class 10 or 12,"Certificate or diploma course in cosmetology, hair styling, make-up or skin care.",Skill India Digital,https://www.skillindiadigital.gov.in/
+beauty,Beauty and wellness,39-50,no,Build your profile,"Train in a salon, build a portfolio of your work and get a skill certificate.",,
+sports,Sports and fitness,39-9031;27-202,no,Training,"Fitness certifications, or a B.P.Ed / B.P.E.S degree; coaching diplomas are offered by the Sports Authority of India.",Sports Authority of India,https://sportsauthorityofindia.nic.in/
