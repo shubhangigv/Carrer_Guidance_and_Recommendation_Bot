@@ -169,13 +169,13 @@ def _counts(engine):
         return {t: conn.execute(text(f"SELECT COUNT(*) FROM {t}")).scalar() for t in tables}
 
 
-def test_loader_creates_all_13_tables(test_engine, onet_dir):
+def test_loader_creates_all_14_tables(test_engine, onet_dir):
     load(test_engine, onet_dir)
     with test_engine.connect() as conn:
         tables = set(conn.execute(text("SHOW TABLES")).scalars())
     assert tables == {"student", "assessment", "assessment_rating", "recommendation", "career", "skill",
                       "career_skill", "interest", "career_interest", "knowledge", "career_knowledge",
-                      "course", "job"}
+                      "course", "job", "roadmap_progress"}
 
 
 def test_loader_can_run_twice_without_duplicates(test_engine, messy_onet_dir):

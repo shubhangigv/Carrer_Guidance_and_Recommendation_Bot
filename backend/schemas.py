@@ -91,6 +91,10 @@ class AssessmentIn(BaseModel):
                                                  description="Missing rows count as cant_assess")
     subjects: dict[SubjectRow, SubjectAnswer] = Field(default_factory=dict,
                                                        description="Missing rows count as cant_assess")
+    preferred_location: Optional[str] = Field(default=None, max_length=100,
+                                              description="Where the student wants to work, e.g. Pune (job-search links)")
+    about_me: Optional[str] = Field(default=None, max_length=1000,
+                                    description="Optional free text: what the student enjoys (semantic matching)")
 
     model_config = {"json_schema_extra": {"example": {
         "interests": {"Realistic": 2, "Investigative": 5, "Artistic": 3, "Social": 3,
@@ -122,7 +126,8 @@ class RecommendationOut(BaseModel):
     rank: int
     career_id: int
     code: str
-    career: str
+    career: str = Field(description="official O*NET title")
+    display_title: str = Field(description="short common title shown to students")
     field: str
     display: Literal["score", "range", "withheld"]
     interest_fit: float
@@ -149,15 +154,30 @@ class CareerBrief(BaseModel):
     career_id: int
     code: str
     title: str
+    display_title: str
+    excluded_reason: Optional[str] = Field(default=None, description="why it is not recommended in India")
+    job_zone: Optional[int] = None
     field: str
     ranked: bool = Field(description="false if O*NET lacks the data to score this career")
     matched_title: Optional[str] = Field(default=None, description="the alternate job title that matched")
+
+
+class Salary(BaseModel):
+    min_lpa: float
+    max_lpa: float
+    source_name: str
+    source_url: Optional[str]
+    year: Optional[str]
 
 
 class CareerDetail(BaseModel):
     career_id: int
     code: str
     title: str
+    display_title: str
+    excluded_reason: Optional[str] = None
+    industries: list[str] = []
+    salary: Optional[Salary] = Field(default=None, description="only from a cited source in config/salary_india.csv")
     description: Optional[str]
     field: str
     job_zone: Optional[int]
@@ -198,6 +218,7 @@ class Alternative(BaseModel):
     career_id: int
     code: str
     career: str
+    display_title: str
     field: str
     display: str
     match_low: Optional[float]
@@ -216,6 +237,7 @@ class TargetOut(BaseModel):
     career_id: int
     code: str
     career: str
+    display_title: str
     field: str
     job_zone: Optional[int]
     readiness: dict[str, Union[float, str, None]]
@@ -233,3 +255,80 @@ class Health(BaseModel):
     careers_total: int
     careers_ranked: int
     checked_at: datetime
+
+
+# ---------------------------------------------------------------- the logged-in student
+class MeOut(BaseModel):
+    student_id: int
+    name: str
+    email: str
+    latest_assessment_id: Optional[int]
+    preferred_location: Optional[str] = None
+
+
+# ---------------------------------------------------------------- explore by industry
+class Industry(BaseModel):
+    id: str
+    name: str
+    description: str
+    careers: int
+
+
+class IndustryCareers(BaseModel):
+    id: str
+    name: str
+    description: str
+    careers: list[CareerBrief]
+
+
+# ---------------------------------------------------------------- requirements and roadmap
+class Requirement(BaseModel):
+    element: str
+    kind: Literal["skill", "knowledge"]
+    importance: float
+    required_level: Optional[float]
+    your_level: Optional[float]
+    gap: Optional[float]
+    priority: Optional[float]
+    status: Literal["have", "build", "not_assessed", "not_measured"]
+    quiz_row: Optional[str]
+    start_from_scratch: bool
+
+
+class RequirementsOut(BaseModel):
+    career_id: int
+    display_title: str
+    requirements: list[Requirement]
+
+
+class RoadmapStep(BaseModel):
+    key: str
+    stage: str
+    title: str
+    detail: str
+    items: list[Requirement]
+    done: bool
+
+
+class RoadmapOut(BaseModel):
+    career_id: int
+    code: str
+    display_title: str
+    career: str
+    job_zone: Optional[int]
+    preferred_location: Optional[str]
+    steps: list[RoadmapStep]
+    done: int
+    total: int
+
+
+class ProgressIn(BaseModel):
+    step_key: str = Field(min_length=1, max_length=150)
+    done: bool
+
+
+class RoadmapSummary(BaseModel):
+    career_id: int
+    display_title: str
+    done: int
+

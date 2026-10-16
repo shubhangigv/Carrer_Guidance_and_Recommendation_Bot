@@ -114,3 +114,60 @@ def apply_local_rules(data, onet_dir=None, exclusions_path=EXCLUSIONS_FILE):
     data["extras_info"].append(f"{exclusions_path.name if hasattr(exclusions_path, 'name') else exclusions_path}: "
                                f"{len(data['excluded'])} careers excluded for India")
     return data
+
+
+# ---------------------------------------------------------------- industries ("Explore careers")
+INDUSTRIES_FILE = PROJECT_ROOT / "config" / "industries.csv"
+SALARY_FILE = PROJECT_ROOT / "config" / "salary_india.csv"
+
+
+def load_industries(path=INDUSTRIES_FILE):
+    """[{id, name, description, prefixes: [...]}] from config/industries.csv."""
+    with Path(path).open(encoding="utf-8", newline="") as f:
+        return [{"id": r["id"].strip(), "name": r["name"].strip(), "description": r["description"].strip(),
+                 "prefixes": [p.strip() for p in r["soc_prefixes"].split(";") if p.strip()]}
+                for r in csv.DictReader(f) if (r.get("id") or "").strip()]
+
+
+def industry_codes(industry, data):
+    """O*NET codes in one industry (prefix match), without excluded careers, in title order."""
+    excluded = data.get("excluded", {})
+    codes = [c for c in data["occupations"].index
+             if c not in excluded and any(c.startswith(p) for p in industry["prefixes"])]
+    titles = data.get("short_title", data["occupations"]["Title"])
+    return sorted(codes, key=lambda c: str(titles.get(c, c)).lower())
+
+
+def industries_of(code, industries):
+    return [i["id"] for i in industries if any(code.startswith(p) for p in i["prefixes"])]
+
+
+# ---------------------------------------------------------------- salaries (only from cited sources)
+def load_salaries(path=SALARY_FILE):
+    """Rows of config/salary_india.csv that have a number AND a source. Empty list if none."""
+    path = Path(path)
+    if not path.exists():
+        return []
+    with path.open(encoding="utf-8", newline="") as f:
+        rows = list(csv.DictReader(f))
+    out = []
+    for r in rows:
+        try:
+            lo, hi = float(r["min_lpa"]), float(r["max_lpa"])
+        except (TypeError, ValueError, KeyError):
+            continue
+        if not (r.get("source_name") or "").strip():
+            continue                                   # no source -> not shown
+        out.append({"onet_code": (r.get("onet_code") or "").strip(), "industry_id": (r.get("industry_id") or "").strip(),
+                    "min_lpa": lo, "max_lpa": hi, "source_name": r["source_name"].strip(),
+                    "source_url": (r.get("source_url") or "").strip() or None,
+                    "year": (r.get("year") or "").strip() or None})
+    return out
+
+
+def salary_for(code, industry_ids, salaries):
+    """The salary row for this career: an exact O*NET code row first, else its first industry row."""
+    exact = next((s for s in salaries if s["onet_code"] == code), None)
+    if exact:
+        return exact
+    return next((s for i in industry_ids for s in salaries if not s["onet_code"] and s["industry_id"] == i), None)
