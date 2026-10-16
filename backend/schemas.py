@@ -370,3 +370,58 @@ class ChatOut(BaseModel):
 class AssistantStatus(BaseModel):
     mode: Literal["gemini", "offline"]
     semantic_method: Optional[str]
+
+
+# ---------------------------------------------------------------- how to get there (pathway)
+class RouteStep(BaseModel):
+    stage: str
+    text: str
+    link_name: Optional[str]
+    link_url: Optional[str]
+
+
+class Route(BaseModel):
+    id: str
+    name: str
+    verified: bool = Field(description="false = drafted, not yet checked by the team on the official site")
+    steps: list[RouteStep]
+
+
+class Stream(BaseModel):
+    stream: str
+    because: list[str]
+
+
+class EducationShare(BaseModel):
+    level: int
+    label: str
+    percent: int
+
+
+class LadderCareer(BaseModel):
+    career_id: int
+    display_title: str
+    job_zone: int
+    source: str
+
+
+class Course(BaseModel):
+    element: str
+    title: str
+    provider: Optional[str]
+    url: str
+    cost: Optional[str]
+    language: Optional[str]
+    verified_on: str
+
+
+class PathwayOut(BaseModel):
+    career_id: int
+    display_title: str
+    job_zone: Optional[int]
+    stream: Optional[Stream]
+    routes: list[Route]
+    education_us: list[EducationShare] = Field(description="O*NET survey (US): share of workers by education level")
+    ways_in: list[LadderCareer]
+    grow_into: list[LadderCareer]
+    courses: dict[str, list[Course]] = Field(description="checked courses per skill/knowledge (config/courses.csv)")

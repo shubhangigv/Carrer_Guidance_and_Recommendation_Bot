@@ -14,6 +14,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from backend.security import read_token
 from ml.localise import clean_title, industries_of, load_industries, load_salaries, salary_for
+from ml.pathways import load_courses, load_routes
 from ml.recommender_v2 import field_of
 from ml.semantic import LazyMatcher, SemanticMatcher
 
@@ -29,6 +30,8 @@ class AppContext:
     data_source: str       # "mysql" or "files"
     industries: list = field(default_factory=load_industries)     # config/industries.csv
     salaries: list = field(default_factory=load_salaries)         # config/salary_india.csv (cited rows only)
+    routes: list = field(default_factory=load_routes)             # config/career_paths.csv (Indian education routes)
+    courses: list = field(default_factory=load_courses)           # config/courses.csv (checked courses only)
     matcher: object = None     # ml/semantic.py matcher (LazyMatcher at startup; built on first use otherwise)
 
     def __post_init__(self):

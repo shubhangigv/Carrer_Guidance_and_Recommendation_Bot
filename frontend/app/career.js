@@ -14,7 +14,7 @@ PAGES.career = async (params) => {
   const id = Number(params[0]);
   if (!id) return failed(new Error("No career selected."));
   loading();
-  const [career, reqs] = await Promise.all([api.career(id), api.requirements(id)]);
+  const [career, reqs, path] = await Promise.all([api.career(id), api.requirements(id), api.pathway(id)]);
   let fit = null;
   if (loggedIn() && state.assessmentId && career.ranked) {
     try { fit = await api.target(id, state.assessmentId); } catch (e) { if (e.status === 401) return handle(e); }
@@ -34,16 +34,15 @@ PAGES.career = async (params) => {
     <div class="cols">
       <div class="wide">
         <div class="card"><h2>What the work is</h2><p style="margin-top:10px">${esc(career.description || "No description in O*NET.")}</p></div>
+        ${pathwayHtml(path)}
         <div class="card" id="skillsCard"><div class="spread"><h2>${measured ? "Skills to build" : "What this career needs"}</h2>
           ${career.ranked && !career.excluded_reason ? `<a class="btn go" href="#/roadmap/${id}">Make my roadmap</a>` : ""}</div>
           <p class="soft small" style="margin-top:6px">${measured ? "Every skill and knowledge area O*NET rates as important (3 or more out of 5) for this career, compared with your quiz answers."
             : "Every skill and knowledge area O*NET rates as important for this career. " + (loggedIn() ? "Take the quiz to compare them with your level." : "Log in and take the quiz to compare them with your level.")}</p>
-          ${skillsHtml(needs, measured)}</div>
+          ${skillsHtml(needs, measured, path.courses)}</div>
       </div>
       <div class="narrow">
         ${fit ? fitHtml(fit) : ""}
-        <div class="card"><h3>How to get in</h3><p class="small" style="margin-top:8px">${esc(prepLabel(career.job_zone))}.</p>
-          <p class="tiny faint" style="margin-top:6px">Based on O*NET Job Zone ${career.job_zone ?? "–"} of 5 (US data, our reading for India). Check the exact eligibility for courses and exams on their official websites.</p></div>
         <div class="card"><h3>Salary</h3>${career.salary
           ? `<p class="small" style="margin-top:8px"><b class="num">₹${career.salary.min_lpa}–${career.salary.max_lpa} lakh</b> per year</p>
              <p class="tiny faint">Source: ${career.salary.source_url ? `<a href="${esc(career.salary.source_url)}" target="_blank" rel="noopener">${esc(career.salary.source_name)}</a>` : esc(career.salary.source_name)}${career.salary.year ? ", " + esc(career.salary.year) : ""}</p>`
@@ -68,14 +67,14 @@ function fitHtml(t) {
     ${t.reasons.length ? `<ul class="why">${t.reasons.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}</div>`;
 }
 
-function skillsHtml(needs, measured) {
+function skillsHtml(needs, measured, courses) {
   if (!needs.length) return `<p class="soft" style="margin-top:12px">O*NET has no skill ratings for this career.</p>`;
   const row = (r) => {
     const you = r.your_level == null ? 0 : Math.min(100, r.your_level / 7 * 100);
     const need = r.required_level == null ? null : r.required_level / 7 * 100;
     const tag = r.status === "build" ? "gold" : r.status === "have" ? "green" : "";
     return `<div class="skill"><div><b>${esc(r.element)}</b><div class="tiny faint">${r.kind === "skill" ? "Skill" : "Knowledge"} · importance ${r.importance}/5${r.quiz_row ? " · quiz: " + esc(r.quiz_row) : ""}</div>
-        ${r.status === "build" ? `<div class="tiny" style="margin-top:2px">${linkList(learnLinks(r.element))}</div>` : ""}</div>
+        ${r.status === "build" ? `<div class="tiny" style="margin-top:2px">${coursesHtml(r.element, courses)}</div>` : ""}</div>
       <div class="track" role="img" aria-label="${esc(r.element)}: ${r.your_level == null ? "your level unknown" : "you " + r.your_level}, needed ${r.required_level ?? "–"} of 7">
         ${r.your_level == null ? "" : `<span class="you" style="width:${you}%"></span>`}${need == null ? "" : `<span class="need" style="left:${need}%"></span>`}</div>
       ${measured ? `<span class="tag ${tag}">${esc(STATUS_TEXT[r.status])}</span>` : `<span class="tiny faint num">level ${r.required_level ?? "–"}/7</span>`}</div>`;
@@ -86,4 +85,25 @@ function skillsHtml(needs, measured) {
                   ["You already have", needs.filter(r => r.status === "have")]];
   return `<div class="legend" style="margin-top:12px"><span><i style="background:var(--green)"></i>Your level</span><span><i style="background:var(--ink);width:3px"></i>Level needed (0–7)</span></div>
     ${groups.filter(([, rows]) => rows.length).map(([name, rows]) => `<h3 style="margin-top:18px">${name} <span class="faint small">(${rows.length})</span></h3>${rows.map(row).join("")}`).join("")}`;
+}
+
+// "How to get there": Indian education route(s), stream after Class 10, O*NET education (US), career ladder.
+function pathwayHtml(p) {
+  const routes = p.routes.map(r => `<div style="margin-top:14px"><div class="spread"><h3>${esc(r.name)}</h3>
+      ${r.verified ? `<span class="tag green">Checked by the team</span>` : `<span class="tag gold">Not yet checked – confirm on the official site</span>`}</div>
+      <ol class="steps">${r.steps.map((st, i) => `<li class="step" style="grid-template-columns:110px minmax(0,1fr)">
+        <span class="kicker" style="color:var(--soft)">${esc(st.stage)}</span>
+        <div><p>${esc(st.text)}</p>${st.link_url ? `<p class="tiny" style="margin-top:4px"><a href="${esc(st.link_url)}" target="_blank" rel="noopener">${esc(st.link_name || "Official website")} →</a></p>` : ""}</div></li>`).join("")}</ol></div>`).join("");
+  const ladder = (title, rows, note) => rows.length ? `<div style="margin-top:14px"><h3>${title}</h3><p class="tiny faint">${note}</p><ul class="list">${rows.map(c =>
+      `<li><a class="linkrow" href="#/career/${c.career_id}"><b>${esc(c.display_title)}</b><span class="tiny faint">${esc(prepLabel(c.job_zone))}</span></a></li>`).join("")}</ul></div>` : "";
+  return `<div class="card"><h2>How to get there</h2>
+    <div class="tags" style="margin-top:10px"><span class="tag green">${esc(prepLabel(p.job_zone))}</span>
+      ${p.stream ? `<span class="tag">After Class 10: ${esc(p.stream.stream)}</span>` : ""}</div>
+    ${p.stream && p.stream.because.length ? `<p class="tiny faint" style="margin-top:6px">Stream suggested because this career uses ${p.stream.because.map(esc).join(", ")} (Pathfinder's suggestion from O*NET data).</p>` : ""}
+    ${routes || `<p class="soft small" style="margin-top:12px">We have not written an Indian education route for this career yet. Ask the assistant, or check the courses colleges offer for “${esc(p.display_title)}”.</p>`}
+    ${p.education_us.length ? `<div style="margin-top:14px"><h3>What workers studied (US)</h3><p class="tiny faint">O*NET survey of people in this job in the USA – a rough guide only.</p>
+      ${p.education_us.map(e => `<div class="parts" style="grid-template-columns:minmax(0,1fr) 120px auto"><span>${esc(e.label)}</span><div class="meter"><i style="width:${e.percent}%"></i></div><span class="num">${e.percent}%</span></div>`).join("")}</div>` : ""}
+    ${ladder("Ways in", p.ways_in, "Related careers that need less preparation – a common starting point.")}
+    ${ladder("Where you can grow", p.grow_into, "Related careers that need more preparation or experience.")}
+  </div>`;
 }

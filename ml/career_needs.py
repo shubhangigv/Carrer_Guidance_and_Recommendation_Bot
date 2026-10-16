@@ -77,14 +77,25 @@ def requirements(student, data, code, min_importance=MIN_IMPORTANCE):
     return rows
 
 
-def roadmap(student, data, code, job_zone=None):
-    """Ordered roadmap steps. Each step has a stable key so progress can be saved per student."""
+def roadmap(student, data, code, job_zone=None, route_name=None):
+    """Ordered roadmap steps. Each step has a stable key so progress can be saved per student.
+    route_name: the matching Indian education route (config/career_paths.csv), if any."""
+    from ml.pathways import suggested_stream
     needs = requirements(student, data, code)
     steps = []
     title, meaning = JOB_ZONES.get(job_zone, ("Preparation level not rated by O*NET", "Check the education "
                                               "usually asked for in job adverts for this career."))
+    stream = suggested_stream(data, code)
+    if stream and stream["because"]:
+        steps.append({"key": "stream", "stage": "Foundation", "title": f"Choose your stream: {stream['stream']}",
+                      "detail": "Suggested because this career uses " + ", ".join(stream["because"]) +
+                                " (Pathfinder's suggestion from O*NET). Skip this step if you are past Class 12.",
+                      "items": []})
+    detail = f"O*NET: {title}. {meaning}"
+    if route_name:
+        detail += f" See the route '{route_name}' on the career page for the exams and degree."
     steps.append({"key": "education", "stage": "Foundation", "title": "Get the right qualification",
-                  "detail": f"O*NET: {title}. {meaning}", "items": []})
+                  "detail": detail, "items": []})
 
     build = sorted([r for r in needs if r["status"] == "build"], key=lambda r: -r["priority"])
     first, second = STAGE_SIZES

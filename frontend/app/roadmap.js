@@ -7,7 +7,8 @@ PAGES.roadmap = async (params) => {
   const id = Number(params[0]);
   if (!id) return roadmapList();
   loading("Building your roadmap…");
-  draw(await api.roadmap(id));
+  const [first, path] = await Promise.all([api.roadmap(id), api.pathway(id)]);
+  draw(first);
 
   function draw(plan) {
     const stages = ["Foundation", "Start now", "Next", "Later"];
@@ -30,7 +31,9 @@ PAGES.roadmap = async (params) => {
 
   function stepHtml(s, plan) {
     let extra = "";
-    if (s.key.startsWith("build:")) extra = `<p class="tiny" style="margin-top:6px">Learn: ${linkList(learnLinks(s.items[0].element))}</p>`;
+    if (s.key.startsWith("build:")) extra = `<p class="tiny" style="margin-top:6px">${coursesHtml(s.items[0].element, path.courses)}</p>`;
+    if (s.key === "education" && path.routes.length) extra = `<p class="tiny" style="margin-top:6px">Route: ${path.routes[0].steps.map(st => esc(st.stage + ": " + st.text.split(".")[0])).join(" → ")}
+      <a href="#/career/${plan.career_id}">full details →</a></p>`;
     if (s.key === "check") extra = `<div class="tags" style="margin-top:8px">${s.items.map(r => `<span class="tag">${esc(r.element)}</span>`).join("")}</div>`;
     if (s.key === "apply") extra = `<p class="tiny" style="margin-top:6px">${linkList(jobLinks(plan.display_title, placeFor(state.location)))}</p>`;
     return `<li class="step ${s.done ? "done" : ""}"><input type="checkbox" id="st-${esc(s.key)}" data-step="${esc(s.key)}" ${s.done ? "checked" : ""}
