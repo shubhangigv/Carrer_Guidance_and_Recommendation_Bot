@@ -28,12 +28,13 @@ from sqlalchemy import text
 
 from backend import schemas
 from backend.db import PROJECT_ROOT, get_engine, update_schema
-from backend.deps import (MIN_JOB_ZONE, MODEL_VERSION, AppContext, career_code, current_student,
+from backend.deps import (MIN_JOB_ZONE, MODEL_VERSION, AppContext, career_brief, career_code, current_student,
                           get_context, holder, num, own_assessment)
 from backend.repository import EmailTaken, MemoryRepository, SqlRepository
-from backend.routes import explore, roadmap
+from backend.routes import assistant, explore, roadmap
 from backend.security import create_token, expire_minutes, hash_password, verify_password
 from ml.localise import apply_local_rules
+from ml.semantic import LazyMatcher
 from ml.recommender_v2 import (add_extras, explain_v2, field_of, load_from_mysql, load_onet_v2,
                                questions_needed, recommend_v2, target_career)
 
@@ -65,7 +66,9 @@ def build_context():
     apply_local_rules(data, ONET_DIR if has_files else None)
     for line in data.get("extras_info", []):
         log.info(line)
-    return AppContext(data, repo, repo.career_ids(data), source)
+    ctx = AppContext(data, repo, repo.career_ids(data), source)
+    ctx.matcher = LazyMatcher(data)           # builds in the background; the server starts at once
+    return ctx
 
 
 @asynccontextmanager
@@ -91,18 +94,13 @@ app.add_middleware(CORSMiddleware, allow_origins=["null"],
 
 app.include_router(explore.router)
 app.include_router(roadmap.router)
+app.include_router(assistant.router)
 
 
 def _follow_up(label):
     category, item = label.split(": ", 1)
     return {"category": category, "item": item}
 
-
-def career_brief(ctx, code, matched_title=None):
-    return {"career_id": ctx.career_ids[code], "code": code, "title": ctx.official_title(code),
-            "display_title": ctx.display_title(code), "field": field_of(code), "ranked": code in ctx.ranked,
-            "matched_title": matched_title, "excluded_reason": ctx.excluded_reason(code),
-            "job_zone": ctx.job_zone(code)}
 
 
 # ---------------------------------------------------------------- endpoints

@@ -332,3 +332,41 @@ class RoadmapSummary(BaseModel):
     display_title: str
     done: int
 
+
+
+# ---------------------------------------------------------------- matches for your own words + assistant
+class TextMatchIn(BaseModel):
+    text: str = Field(min_length=3, max_length=1000,
+                      description="What the student enjoys, in their own words")
+    top_n: int = Field(default=10, ge=1, le=30)
+
+
+class TextMatch(CareerBrief):
+    similarity: float = Field(description="cosine similarity 0-1 between the text and the career description")
+
+
+class TextMatchOut(BaseModel):
+    method: str = Field(description='"sbert:<model>" (Sentence-BERT) or "tfidf" (word matching)')
+    results: list[TextMatch]
+
+
+class ChatTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    text: str = Field(max_length=4000)
+
+
+class ChatIn(BaseModel):
+    message: str = Field(min_length=1, max_length=1000)
+    history: list[ChatTurn] = Field(default_factory=list, max_length=20)
+    career_id: Optional[int] = Field(default=None, description="the career page the student is looking at")
+
+
+class ChatOut(BaseModel):
+    reply: str
+    mode: Literal["gemini", "offline"]
+    sources: list[CareerBrief]
+
+
+class AssistantStatus(BaseModel):
+    mode: Literal["gemini", "offline"]
+    semantic_method: Optional[str]
