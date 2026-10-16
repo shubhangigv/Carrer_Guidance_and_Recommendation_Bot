@@ -99,6 +99,8 @@ CREATE TABLE IF NOT EXISTS assessment (
     assessment_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     student_id    INT UNSIGNED NOT NULL,
     completed_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    preferred_location VARCHAR(100) NULL,          -- e.g. Pune, used for job-search links (migration 003)
+    about_me      TEXT NULL,                       -- optional free text, used by the semantic matcher
     PRIMARY KEY (assessment_id),
     KEY ix_assessment_student (student_id),
     CONSTRAINT fk_assessment_student FOREIGN KEY (student_id) REFERENCES student (student_id) ON DELETE CASCADE
@@ -158,4 +160,16 @@ CREATE TABLE IF NOT EXISTS job (
     PRIMARY KEY (job_id),
     KEY ix_job_career (career_id),
     CONSTRAINT fk_job_career FOREIGN KEY (career_id) REFERENCES career (career_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Roadmap progress: one row per finished step (migration 003).
+CREATE TABLE IF NOT EXISTS roadmap_progress (
+    student_id INT UNSIGNED NOT NULL,
+    career_id  INT UNSIGNED NOT NULL,
+    step_key   VARCHAR(150) NOT NULL,               -- e.g. education, build:Programming
+    done_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (student_id, career_id, step_key),
+    KEY ix_roadmap_progress_career (career_id),
+    CONSTRAINT fk_roadmap_progress_student FOREIGN KEY (student_id) REFERENCES student (student_id) ON DELETE CASCADE,
+    CONSTRAINT fk_roadmap_progress_career  FOREIGN KEY (career_id)  REFERENCES career (career_id)   ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

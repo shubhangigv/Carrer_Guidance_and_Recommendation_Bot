@@ -247,6 +247,12 @@ def test_flow_with_mysql_repository(onet_dir, onet, old_database):
                 "SELECT rating, answer_status FROM assessment_rating WHERE item = 'Research'")).one()
             versions = conn.execute(sqlalchemy.text("SELECT DISTINCT model_version FROM recommendation")).scalars().all()
         assert tuple(stored) == (None, "cant_assess") and versions == ["v2"]
+        # roadmap progress and the "me" endpoint are stored in MySQL too
+        cid = recs[0]["career_id"]
+        r = client.put(f"/roadmap/{cid}/progress", json={"step_key": "education", "done": True}, headers=headers)
+        assert r.status_code == 200 and r.json()["done"] == 1
+        assert client.get("/roadmaps", headers=headers).json()[0]["career_id"] == cid
+        assert client.get("/me", headers=headers).json()["latest_assessment_id"] == aid
     finally:
         app.dependency_overrides.clear()
         engine.dispose()

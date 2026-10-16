@@ -1,0 +1,28 @@
+id,name,description,soc_prefixes
+medicine,Doctors & Medicine,"Doctors, surgeons, dentists, pharmacists, nurses and therapists.",29-1
+health-support,Health Technicians & Support,"Lab and medical technicians, paramedics, assistants and care workers.",29-2;31
+engineering,Engineering,"Engineers and engineering technicians in every branch.",17-2;17-3
+it-software,IT & Software,"Software developers, web developers, network and security specialists.",15-12
+data-maths,Data & Mathematics,"Data scientists, statisticians, actuaries and mathematicians.",15-2
+science,Science & Research,"Biologists, chemists, physicists, environmental and social scientists.",19
+agriculture,Agriculture & Farming,"Farming, agricultural and food science, forestry and fisheries.",45;19-1011;19-1012;19-1013;11-9013
+animals,Animal Care & Veterinary,"Veterinarians, vet technicians and animal care workers.",29-1131;29-2056;39-2
+film-entertainment,"Film, TV & Entertainment (Bollywood)","Actors, directors, producers, dancers, musicians, camera operators and film editors.",27-201;27-203;27-204;27-4
+media,Media & Journalism,"Reporters, editors, writers, public relations and broadcasting.",27-3
+art-design,Art & Design,"Graphic, interior, fashion and product designers, artists and animators.",27-1
+fashion-textiles,Fashion & Textiles,"Fashion design, tailoring, textile and garment work.",27-1022;51-6
+beauty-wellness,Beauty & Wellness,"Hairstylists, makeup artists, skincare specialists, massage therapists and fitness trainers.",39-5;31-9011;39-9031
+sports,Sports & Fitness,"Athletes, coaches, umpires and fitness trainers.",27-202;39-9031
+teaching,Teaching & Education,"School and college teachers, trainers, librarians and education administrators.",25;11-9031;11-9032;11-9033
+law,Law,"Lawyers, judges, paralegals and legal support.",23
+business,Business & Management,"Managers, business analysts, HR, marketing and operations.",11;13-1
+finance,Finance & Accounting,"Accountants, auditors, financial analysts and bank officers.",13-2
+sales-marketing,Sales & Marketing,"Sales representatives, marketing and advertising roles.",41;11-2
+architecture-construction,Architecture & Construction,"Architects, planners, construction managers and building trades.",17-1;47;11-9021
+transport-aviation,Transport & Aviation,"Pilots, drivers, ship and rail crews, logistics.",53
+hospitality-food,"Hospitality, Food & Tourism","Chefs, hotel and restaurant managers, travel and tour work.",35;11-9051;11-9081;39-7
+social-work,Social Work & Psychology,"Counsellors, social workers, psychologists and community workers.",21;19-303
+public-safety,"Police, Defence & Public Safety","Police, firefighters, security, emergency and defence roles.",33;55
+office-admin,Office & Administration,"Clerks, secretaries, receptionists and administrative support.",43
+manufacturing,Manufacturing & Production,"Factory, machine, quality control and production work.",51
+repair-maintenance,Repair & Maintenance,"Mechanics, electricians, technicians who install and repair equipment.",49

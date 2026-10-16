@@ -30,6 +30,7 @@ class MemoryRepository:
 
     def __init__(self):
         self.students, self.assessments, self.recommendations = {}, {}, []
+        self.progress = {}                      # (student_id, career_id) -> set of finished step keys
         self._lock = threading.Lock()
 
     def create_student(self, name, email, password_hash, education_level=None, degree=None, year_of_study=None):
@@ -45,13 +46,34 @@ class MemoryRepository:
     def get_student_by_email(self, email):
         return next((dict(s) for s in self.students.values() if s["email"] == email), None)
 
-    def create_assessment(self, student_id, answers):
+    def get_student(self, student_id):
+        s = self.students.get(student_id)
+        return None if s is None else dict(s)
+
+    def create_assessment(self, student_id, answers, preferred_location=None, about_me=None):
         with self._lock:
             assessment_id = len(self.assessments) + 1
             self.assessments[assessment_id] = {"assessment_id": assessment_id, "student_id": student_id,
                                                "completed_at": datetime.now(timezone.utc),
+                                               "preferred_location": preferred_location, "about_me": about_me,
                                                "answers": [dict(a) for a in answers]}
             return assessment_id
+
+    def latest_assessment_id(self, student_id):
+        mine = [a for a, v in self.assessments.items() if v["student_id"] == student_id]
+        return max(mine) if mine else None
+
+    def get_progress(self, student_id, career_id):
+        return set(self.progress.get((student_id, career_id), set()))
+
+    def set_progress(self, student_id, career_id, step_key, done):
+        with self._lock:
+            steps = self.progress.setdefault((student_id, career_id), set())
+            steps.add(step_key) if done else steps.discard(step_key)
+
+    def roadmap_careers(self, student_id):
+        """[(career_id, finished steps)] for careers the student has started a roadmap for."""
+        return [(cid, len(v)) for (sid, cid), v in self.progress.items() if sid == student_id and v]
 
     def get_assessment(self, assessment_id):
         a = self.assessments.get(assessment_id)
@@ -91,10 +113,16 @@ class SqlRepository:
             row = conn.execute(text("SELECT * FROM student WHERE email = :email"), {"email": email}).mappings().first()
         return None if row is None else dict(row)
 
-    def create_assessment(self, student_id, answers):
+    def get_student(self, student_id):
+        with self.engine.connect() as conn:
+            row = conn.execute(text("SELECT * FROM student WHERE student_id = :id"), {"id": student_id}).mappings().first()
+        return None if row is None else dict(row)
+
+    def create_assessment(self, student_id, answers, preferred_location=None, about_me=None):
         with self.engine.begin() as conn:      # one transaction: the assessment and all its answers, or nothing
-            assessment_id = int(conn.execute(text("INSERT INTO assessment (student_id) VALUES (:sid)"),
-                                             {"sid": student_id}).lastrowid)
+            assessment_id = int(conn.execute(text("""
+                INSERT INTO assessment (student_id, preferred_location, about_me) VALUES (:sid, :loc, :about)"""),
+                {"sid": student_id, "loc": preferred_location, "about": about_me}).lastrowid)
             conn.execute(text("""
                 INSERT INTO assessment_rating (assessment_id, category, item, rating, answer_status)
                 VALUES (:assessment_id, :category, :item, :rating, :answer_status)"""),
@@ -120,6 +148,30 @@ class SqlRepository:
                 [{"student_id": student_id, "assessment_id": assessment_id, "career_id": career_ids[r["code"]],
                   "match_score": r["match_score"], "reasons": json.dumps(r["reasons"]),
                   "model_version": r["model_version"]} for r in rows])
+
+    def latest_assessment_id(self, student_id):
+        with self.engine.connect() as conn:
+            return conn.execute(text("SELECT MAX(assessment_id) FROM assessment WHERE student_id = :sid"),
+                                {"sid": student_id}).scalar()
+
+    def get_progress(self, student_id, career_id):
+        with self.engine.connect() as conn:
+            return set(conn.execute(text("""
+                SELECT step_key FROM roadmap_progress WHERE student_id = :sid AND career_id = :cid"""),
+                {"sid": student_id, "cid": career_id}).scalars())
+
+    def set_progress(self, student_id, career_id, step_key, done):
+        sql = ("INSERT IGNORE INTO roadmap_progress (student_id, career_id, step_key) VALUES (:sid, :cid, :key)"
+               if done else
+               "DELETE FROM roadmap_progress WHERE student_id = :sid AND career_id = :cid AND step_key = :key")
+        with self.engine.begin() as conn:
+            conn.execute(text(sql), {"sid": student_id, "cid": career_id, "key": step_key})
+
+    def roadmap_careers(self, student_id):
+        with self.engine.connect() as conn:
+            return [tuple(r) for r in conn.execute(text("""
+                SELECT career_id, COUNT(*) FROM roadmap_progress WHERE student_id = :sid
+                GROUP BY career_id ORDER BY MAX(done_at) DESC"""), {"sid": student_id}).all()]
 
     def career_ids(self, data):
         with self.engine.connect() as conn:
