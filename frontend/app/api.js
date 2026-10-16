@@ -22,7 +22,7 @@ const api = {
     }
     const data = await res.json().catch(() => null);
     if (!res.ok) {
-      if (res.status === 401 && path !== "/auth/login") { api.setToken(null); }
+      if (res.status === 401 && path !== "/auth/login") api.setToken(null);
       throw Object.assign(new Error(api.errorText(res.status, data)), { status: res.status });
     }
     return data;
@@ -32,12 +32,11 @@ const api = {
   errorText(status, data) {
     const d = data && data.detail;
     if (typeof d === "string") return d;
-    if (Array.isArray(d) && d.length) {
-      return d.map(e => `${(e.loc || []).filter(x => x !== "body").join(" › ")}: ${e.msg}`).join("; ");
-    }
+    if (Array.isArray(d) && d.length) return d.map(e => `${(e.loc || []).filter(x => x !== "body").join(" › ")}: ${e.msg}`).join("; ");
     return `Server error (${status})`;
   },
 
+  // account
   health: () => api.call("GET", "/health"),
   register: (student) => api.call("POST", "/auth/register", student),
   async login(email, password) {
@@ -46,9 +45,27 @@ const api = {
     return r;
   },
   logout() { api.setToken(null); },
+  me: () => api.call("GET", "/me"),
+
+  // quiz and matches
   saveAssessment: (answers) => api.call("POST", "/assessment", answers),
   recommend: (assessmentId, topN = 10) => api.call("GET", `/recommend?assessment_id=${assessmentId}&top_n=${topN}`),
-  searchCareers: (q) => api.call("GET", `/careers/search?q=${encodeURIComponent(q)}&limit=20`),
-  career: (careerId) => api.call("GET", `/careers/${careerId}`),
-  target: (careerId, assessmentId) => api.call("POST", `/target/${careerId}`, { assessment_id: assessmentId }),
+  matchText: (text, topN = 6) => api.call("POST", "/match/text", { text, top_n: topN }),
+
+  // careers
+  searchCareers: (q) => api.call("GET", `/careers/search?q=${encodeURIComponent(q)}&limit=30`),
+  career: (id) => api.call("GET", `/careers/${id}`),
+  requirements: (id) => api.call("GET", `/careers/${id}/requirements`),
+  target: (id, assessmentId) => api.call("POST", `/target/${id}`, { assessment_id: assessmentId }),
+  industries: () => api.call("GET", "/industries"),
+  industry: (id) => api.call("GET", `/industries/${encodeURIComponent(id)}`),
+
+  // roadmap
+  roadmap: (id) => api.call("GET", `/roadmap/${id}`),
+  setStep: (id, stepKey, done) => api.call("PUT", `/roadmap/${id}/progress`, { step_key: stepKey, done }),
+  roadmaps: () => api.call("GET", "/roadmaps"),
+
+  // assistant
+  assistantStatus: () => api.call("GET", "/assistant/status"),
+  chat: (message, history, careerId) => api.call("POST", "/assistant/chat", { message, history, career_id: careerId || null }),
 };
