@@ -16,7 +16,8 @@ give Windows PowerShell commands, and say how to run and verify it.
 ## Hard rules
 
 - Never invent results, accuracy numbers, datasets, citations or salaries. Only report experiments that were actually run.
-- No student data exists yet. Do not create fake "student datasets" and present them as real.
+- Real survey responses exist (data/raw/survey/responses.csv on the team's PC, git-ignored). Never commit them;
+  never create fake student data and present it as real (tests use clearly synthetic CSVs only).
 - Never modify files in `data/raw/`. Write derived files to `data/cleaned/` or `data/processed/`.
 - Never put passwords or keys in code. Use a `.env` file (git-ignored) and `python-dotenv`.
 - Inspect real file columns before using them; do not assume names (O*NET 31.0 renamed several files).
@@ -38,7 +39,8 @@ give Windows PowerShell commands, and say how to run and verify it.
 | Text matching (`ml/semantic.py`: Sentence-BERT if installed, else TF-IDF), Gemini assistant (`backend/assistant.py`) | DONE (needs GEMINI_API_KEY; SBERT optional) |
 | "How to get there": Indian routes (`config/career_paths.csv`), stream, ladder, courses (`ml/pathways.py`, GET /careers/{id}/pathway) | DONE (16 Oct); 28 routes are AI DRAFTS (verified=no) - team must check each on the official site |
 | React version, `engine.js` v2 for the offline prototype | NOT planned |
-| Survey sent, survey analysis, ML comparison | NOT done (no survey data yet) |
+| Survey sent (50+ responses on 16 Oct) | IN PROGRESS (target 100) |
+| Survey scripts: `ml/survey.py`, `experiments/survey_analysis.py`, `hit_rate.py`, `ml_compare.py` (docs/results/survey/README.md) | Scripts DONE + tested on synthetic CSV; NOT run on the real responses yet (raw file stays on the team's PC) |
 
 ## Plan to the deadline (whole project finished by 31 Oct 2026)
 
@@ -83,6 +85,9 @@ backend/deps.py                  AppContext, login dependency, shared helpers;  
 backend/assistant.py             RAG chatbot: retrieve careers -> records -> Gemini (GEMINI_API_KEY, GEMINI_MODEL); offline without key
 config/                          india_exclusions.csv, industries.csv, salary_india.csv (only cited numbers), career_paths.csv
                                  (Indian education routes, AI-drafted, verified=no until checked), courses.csv (checked only)
+ml/survey.py                     reads the Google Forms CSV (finds columns by question number + [row]), engine input, ML features
+config/survey_field_map.csv      Q8 field -> O*NET-SOC prefixes; FIXED 16 Oct before any result - do not tune
+experiments/survey_analysis.py, hit_rate.py, ml_compare.py   survey stats, Hit Rate@1/3/5 vs random, ML vs engine
 ml/pathways.py                   routes per career, stream after Class 10, O*NET education shares (US), career ladder, courses
 tests/test_features.py, tests/test_assistant.py   titles, India filter, industries, requirements, roadmap, matcher, chatbot (Gemini mocked)
 tools/create_career_survey.gs    Google Apps Script that builds the 9-question student survey

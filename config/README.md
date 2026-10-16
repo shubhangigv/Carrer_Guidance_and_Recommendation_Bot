@@ -40,3 +40,10 @@ Specific courses shown next to skills to build. **Only add a course after openin
 and fill `verified_on` (e.g. 2026-10-20); rows without it are ignored. `element` is the O*NET skill or
 knowledge name exactly as shown on the career page (e.g. `Programming`, `Biology`). `cost`: free / paid.
 Until a skill has a checked course, the app shows search links to course sites instead.
+
+## survey_field_map.csv
+
+Which O*NET-SOC codes count as each answer to survey question 8 ("Which career field are you aiming for?").
+Used by `experiments/hit_rate.py` and `experiments/ml_compare.py`. **Fixed on 16 Oct 2026, before any survey
+result was computed** - do not change it to improve a score. If you must change it, say so in the report.
+"Not sure yet" answers are left out of the evaluation and counted separately.
