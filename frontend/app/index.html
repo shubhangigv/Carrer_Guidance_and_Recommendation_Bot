@@ -1,132 +1,59 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pathfinder Career Guide</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%232B3FD1' stroke-width='2.4'%3E%3Ccircle cx='16' cy='16' r='13'/%3E%3Cpath d='M20.5 11.5 L17.8 17.8 L11.5 20.5 L14.2 14.2 Z'/%3E%3C/svg%3E">
+<title>Pathfinder – career guidance</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231F5A3C'/%3E%3Cpath d='M9 23 L16 8 L23 23 L16 19 Z' fill='%23FAF7F1'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
 <link rel="stylesheet" href="styles.css">
-</head><body style="margin:0">
+</head><body>
 <!--
-  Pathfinder student app (Phase 3a). It has no engine of its own: every answer goes to the
-  FastAPI backend, which scores the careers and saves everything in MySQL.
+  Pathfinder student app. It has no engine of its own: every answer goes to the FastAPI backend,
+  which scores the careers and saves everything in MySQL.
   Open it at http://127.0.0.1:8000/app/ while `uvicorn backend.main:app --reload` is running.
-  Files: api.js (all server calls), app.js (screens), styles.css (look, same as the prototype).
--->
 
+  Files (loaded in this order, each one small):
+    api.js        every call to the server
+    core.js       shared helpers, page router (#/matches, #/career/12 ...), header, links
+    account.js    sign up / log in          quiz.js      the one-question-at-a-time quiz
+    matches.js    your matches              career.js    career details: skills to build, jobs, salary
+    roadmap.js    step-by-step roadmap      explore.js   explore by industry + search
+    assistant.js  the career assistant chat
+-->
 <header class="top">
   <div class="top-in">
-    <button class="brand" type="button" data-go="home" aria-label="Pathfinder home">
-      <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="16" cy="16" r="13"></circle><path d="M20.5 11.5 L17.8 17.8 L11.5 20.5 L14.2 14.2 Z"></path></svg>
-      Pathfinder
-    </button>
+    <a class="brand" href="#/">Path<span>finder</span></a>
     <nav class="nav" aria-label="Main">
-      <button type="button" data-go="assess">Assessment</button>
-      <button type="button" data-go="results">Matches</button>
-      <button type="button" data-go="search">Search careers</button>
+      <a href="#/quiz" data-nav="quiz">Quiz</a>
+      <a href="#/matches" data-nav="matches">My matches</a>
+      <a href="#/explore" data-nav="explore">Explore</a>
+      <a href="#/roadmap" data-nav="roadmap">Roadmap</a>
+      <a href="#/assistant" data-nav="assistant">Ask</a>
     </nav>
     <div class="who" id="who"></div>
   </div>
 </header>
-<div class="banner" id="banner"></div>
+<div class="notice" id="notice" hidden></div>
 
-<main>
-  <!-- HOME -->
-  <section class="screen" id="v-home">
-    <div class="hero">
-      <div>
-        <p class="eyebrow">Final-year project</p>
-        <h1>Find the career that fits you, in every field</h1>
-        <p class="lead">Rate your interests, skills and subjects. Pathfinder compares you with every career in O*NET, explains each match from your own answers, and shows what to learn next.</p>
-        <div class="row">
-          <button class="btn primary" type="button" id="startBtn">Start the assessment</button>
-          <button class="btn" type="button" data-go="search">Search careers</button>
-        </div>
-        <div class="stat-row" id="homeStats"></div>
-      </div>
-      <div class="card" style="flex: 1 1 340px">
-        <h2 style="margin-bottom: 16px">How it works</h2>
-        <ol class="steps">
-          <li><div><b>Create an account</b><p class="muted small">Your answers and results are saved so you can come back to them.</p></div></li>
-          <li><div><b>Answer 22 short questions</b><p class="muted small">6 interests, 8 skills and 8 subjects. “No experience” and “Can’t assess” are fine answers.</p></div></li>
-          <li><div><b>See your matches</b><p class="muted small">Careers from different fields, the reasons for each, and the skills to build.</p></div></li>
-        </ol>
-      </div>
-    </div>
-  </section>
+<main id="view" class="page" aria-live="polite"></main>
 
-  <!-- SIGN UP / LOG IN -->
-  <section class="screen" id="v-login" hidden>
-    <div class="split">
-      <div class="card main" style="max-width: 560px">
-        <div class="row" role="tablist" aria-label="Account">
-          <button class="btn primary" type="button" role="tab" id="tabSignup" aria-selected="true">Sign up</button>
-          <button class="btn" type="button" role="tab" id="tabLogin" aria-selected="false">Log in</button>
-        </div>
-        <form id="signupForm" class="qlist" novalidate>
-          <div class="field"><label for="suName">Name</label><input id="suName" autocomplete="name" required maxlength="100"></div>
-          <div class="field"><label for="suEmail">Email</label><input id="suEmail" type="email" autocomplete="email" required></div>
-          <div class="field"><label for="suPass">Password (at least 8 characters)</label><input id="suPass" type="password" autocomplete="new-password" minlength="8" required></div>
-          <div class="grid2">
-            <div class="field"><label for="suDegree">Degree (optional)</label><input id="suDegree" maxlength="100" placeholder="e.g. B.Tech"></div>
-            <div class="field"><label for="suYear">Year of study (optional)</label>
-              <select id="suYear"><option value="">–</option><option>1</option><option>2</option><option>3</option><option>4</option></select></div>
-          </div>
-          <p class="alert" id="signupError" hidden></p>
-          <button class="btn primary" type="submit">Create account and continue</button>
-        </form>
-        <form id="loginForm" class="qlist" novalidate hidden>
-          <div class="field"><label for="liEmail">Email</label><input id="liEmail" type="email" autocomplete="email" required></div>
-          <div class="field"><label for="liPass">Password</label><input id="liPass" type="password" autocomplete="current-password" required></div>
-          <p class="alert" id="loginError" hidden></p>
-          <button class="btn primary" type="submit">Log in</button>
-        </form>
-      </div>
-      <div class="side"><div class="card"><h3>Your data</h3><p class="muted small" style="margin-top:8px">Your password is stored only as a bcrypt hash. Your answers are used only to compute your matches for this final-year project.</p></div></div>
-    </div>
-  </section>
-
-  <!-- ASSESSMENT -->
-  <section class="screen" id="v-assess" hidden>
-    <div class="row" style="justify-content: space-between">
-      <h1 style="font-size: clamp(26px, 4vw, 36px)">Your assessment</h1>
-    </div>
-    <ol class="stepper" id="stepper"></ol>
-    <div class="progress" aria-hidden="true"><span id="progressBar" style="width:0%"></span></div>
-    <div class="card"><h2 id="stepTitle"></h2><p class="muted" id="stepHelp" style="margin-top:6px"></p></div>
-    <div class="qlist" id="questions"></div>
-    <p class="alert" id="assessError" hidden></p>
-    <div class="row" style="justify-content: space-between">
-      <button class="btn" type="button" id="prevStep">Back</button>
-      <span class="muted small" id="assessMeta"></span>
-      <button class="btn primary" type="button" id="nextStep">Next</button>
-    </div>
-  </section>
-
-  <!-- MATCHES, CAREER DETAIL, SEARCH: filled by app.js -->
-  <section class="screen" id="v-results" hidden></section>
-  <section class="screen" id="v-career" hidden></section>
-  <section class="screen" id="v-search" hidden>
-    <div class="card">
-      <h1 style="font-size: clamp(26px, 4vw, 36px)">Search careers</h1>
-      <p class="muted" style="margin-top:6px">Search 1,016 O*NET careers by name, including other job titles (try “sommelier” or “forensic”).</p>
-      <form id="searchForm" class="row" style="margin-top:16px" role="search">
-        <input id="searchBox" type="search" aria-label="Career name" minlength="2" maxlength="100" placeholder="e.g. data, nurse, lawyer" style="flex:1 1 240px;min-height:46px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)">
-        <button class="btn primary" type="submit">Search</button>
-      </form>
-    </div>
-    <div class="qlist" id="searchResults" aria-live="polite"></div>
-  </section>
-</main>
-
-<footer class="muted small" style="max-width:1120px;margin:0 auto;padding:0 16px 32px">
+<footer class="foot">
   This site includes information from the O*NET 31.0 Database by the U.S. Department of Labor, Employment and Training
   Administration (USDOL/ETA). Used under the <a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a> license.
   O*NET&reg; is a trademark of USDOL/ETA. Pathfinder has modified all or some of this information. USDOL/ETA has not approved,
-  endorsed, or tested these modifications. Scores show how similar your profile is to each career; they are not a prediction of success.
+  endorsed, or tested these modifications. Match scores show how similar your answers are to what a career needs; they do not
+  predict success. Pathfinder is a final-year student project.
 </footer>
-
 <div class="toast" id="toast" role="status" hidden></div>
+
 <script src="api.js"></script>
-<script src="app.js"></script>
+<script src="core.js"></script>
+<script src="account.js"></script>
+<script src="quiz.js"></script>
+<script src="matches.js"></script>
+<script src="career.js"></script>
+<script src="roadmap.js"></script>
+<script src="explore.js"></script>
+<script src="assistant.js"></script>
+<script>start();</script>
 </body></html>

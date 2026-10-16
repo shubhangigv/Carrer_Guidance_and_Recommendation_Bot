@@ -33,8 +33,10 @@ give Windows PowerShell commands, and say how to run and verify it.
 | Engine v2 (`ml/recommender_v2.py`, spec in "Design decisions v2"), tests, notebook 03 | DONE (verify on real O*NET) |
 | No-survey experiments (`experiments/`, results in `docs/results/`) | Scripts DONE, NOT run on real O*NET yet |
 | FastAPI backend (`backend/main.py`, tests in `tests/test_api.py`) | DONE (test by hand in /docs) |
-| Student web app on the API (`frontend/app/`, served by FastAPI at `/app/`) | DONE (Phase 3a, 14 Oct) |
-| React version, `engine.js` v2 for the offline prototype | NOT done |
+| Student web app on the API (`frontend/app/`, served by FastAPI at `/app/`) | DONE (redesigned 16 Oct: quiz, matches, career, roadmap, explore, assistant) |
+| Short titles + India filter (`ml/localise.py`, `config/`), industries, full requirements + roadmap (`ml/career_needs.py`) | DONE (16 Oct) |
+| Text matching (`ml/semantic.py`: Sentence-BERT if installed, else TF-IDF), Gemini assistant (`backend/assistant.py`) | DONE (needs GEMINI_API_KEY; SBERT optional) |
+| React version, `engine.js` v2 for the offline prototype | NOT planned |
 | Survey sent, survey analysis, ML comparison | NOT done (no survey data yet) |
 
 ## Plan to the deadline (whole project finished by 31 Oct 2026)
@@ -71,7 +73,15 @@ docs/results/                   experiment CSVs, README (what each tests + limit
 scripts/inventory_onet.py        lists every O*NET file with rows and columns
 frontend/prototype/pathfinder.html  working browser prototype (engine ported to JavaScript)
 frontend/prototype/engine.js     the JavaScript engine on its own (same results as Python)
-frontend/app/                    student web app on the API: index.html, api.js (all fetch calls), app.js, styles.css
+frontend/app/                    student web app on the API: index.html, api.js (all fetch calls), core.js (router, helpers),
+                                 one file per page (account, quiz, matches, career, roadmap, explore, assistant), styles.css
+ml/localise.py                   short display titles (My Next Move titles), India exclusions, industries, cited salaries
+ml/career_needs.py               every important O*NET skill/knowledge per career (have/build/not assessed/not measured) + roadmap
+ml/semantic.py                   free text -> careers (Sentence-BERT all-MiniLM-L6-v2 if installed, else TF-IDF); method is reported
+backend/deps.py                  AppContext, login dependency, shared helpers;  backend/routes/  explore, roadmap, assistant endpoints
+backend/assistant.py             RAG chatbot: retrieve careers -> records -> Gemini (GEMINI_API_KEY, GEMINI_MODEL); offline without key
+config/                          india_exclusions.csv, industries.csv, salary_india.csv (only cited numbers) - see config/README.md
+tests/test_features.py, tests/test_assistant.py   titles, India filter, industries, requirements, roadmap, matcher, chatbot (Gemini mocked)
 tools/create_career_survey.gs    Google Apps Script that builds the 9-question student survey
 tests/test_baseline_recommender.py  pytest tests with a tiny fake O*NET folder (tests/fake_onet.py)
 tests/test_mysql_matches_files.py   files vs MySQL give identical results (skipped if MySQL is not running)
@@ -218,7 +228,9 @@ O*NET 31.0 (download blocked in the dev session), so there are no numbers yet. R
    and `match_score` = the lower bound. Withheld careers return `match_low = null` (interest fit only).
 3. **Frontend**: 3a DONE - `frontend/app/` (plain HTML/JS, no build step) is served by FastAPI at `/app/`
    (`/` redirects there); its question rows must equal SKILL_MAP_V2 / SUBJECT_MAP_V2 (checked in `tests/test_api.py`).
-   Next: React with the same screens.
+   Redesigned 16 Oct (quiz one question at a time, explore, roadmap, assistant); React is not planned.
+3b. **Rules for new UI text/data:** no invented salaries, course links or exam facts (salary only from config/salary_india.csv
+   with a source; learning links are search pages or official portals only). Quiz rows must equal the engine maps.
 4. **Survey** (Google Form from `tools/create_career_survey.gs`, 1st–3rd year students): analysis notebook;
    map form answers to engine input (form has 6 interest rows, 8 skills, 8 subjects incl. merged
    "Physics/Chemistry" and "Commerce/Economics"); Hit Rate@5 of the student's aimed field (Q8).

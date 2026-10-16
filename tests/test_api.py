@@ -266,16 +266,21 @@ def test_web_app_is_served(client):
     assert r.status_code in (302, 307) and r.headers["location"] == "/app/"
     page = client.get("/app/")
     assert page.status_code == 200 and "Pathfinder" in page.text
-    for name in ("api.js", "app.js", "styles.css"):
-        assert client.get(f"/app/{name}").status_code == 200
+    for name in ("api.js", "core.js", "account.js", "quiz.js", "matches.js", "career.js", "roadmap.js",
+                 "explore.js", "assistant.js", "styles.css"):
+        assert client.get(f"/app/{name}").status_code == 200, name
+        assert f'src="{name}"' in page.text or name == "styles.css", f"{name} is not loaded by index.html"
 
 
 def test_web_app_questions_match_the_engine():
-    """The rows in frontend/app/app.js must be exactly the survey rows the API accepts."""
+    """The quiz rows in frontend/app/quiz.js must be exactly the survey rows the API accepts."""
     import re
     from ml.recommender_v2 import SKILL_MAP_V2, SUBJECT_MAP_V2
-    js = (ROOT / "frontend" / "app" / "app.js").read_text(encoding="utf-8")
-    rows = {key: re.findall(r'"([^"]+)"', block)
-            for key, block in re.findall(r'key: "(skills|subjects)".*?rows: \[(.*?)\]', js, re.S)}
-    assert rows["skills"] == list(SKILL_MAP_V2)
-    assert rows["subjects"] == list(SUBJECT_MAP_V2)
+    js = (ROOT / "frontend" / "app" / "quiz.js").read_text(encoding="utf-8")
+
+    def first_values(const):
+        block = re.search(rf"const {const} = \[(.*?)\n\];", js, re.S).group(1)
+        return re.findall(r'^\s*\["([^"]+)",', block, re.M)
+    assert first_values("SKILL_ROWS") == list(SKILL_MAP_V2)
+    assert first_values("SUBJECT_ROWS") == list(SUBJECT_MAP_V2)
+    assert first_values("INTEREST_ROWS") == ["Realistic", "Investigative", "Artistic", "Social", "Enterprising", "Conventional"]

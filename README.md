@@ -18,8 +18,9 @@ from the student's own answers, finds skill gaps, and builds a learning roadmap.
 | Engine v2: readiness, score ranges for unknown answers, field diversity (`ml/recommender_v2.py`) | Done (verify on real O*NET) |
 | No-survey experiments (`experiments/`, `docs/results/`) | Scripts done; run them on real O*NET (see `docs/results/README.md`) |
 | FastAPI backend: auth, assessment, recommendations, search, target career (`backend/main.py`) | Done |
-| Student web app connected to the API (`frontend/app/`, served at `/app/`) | Done |
-| React version of the app | Not done |
+| Student web app: quiz, matches, career details + skills to build, roadmap, explore by industry, assistant (`frontend/app/`) | Done |
+| Short job titles, India filter, Sentence-BERT/TF-IDF text matching, Gemini assistant | Done (Gemini needs a key) |
+| React version of the app | Not planned (plain JS app covers all pages) |
 | ML comparison, Sentence-BERT, hybrid ranking | After survey data |
 | ESCO, NCO-2015, jobs, resume analyser, RAG chatbot | Later |
 
@@ -56,13 +57,34 @@ https://www.onetcenter.org/dl_files/database/db_31_0_text.zip and extract it int
 5. `GET /health` shows where the data comes from: `"data_source": "mysql"` (O*NET loaded into MySQL) or
    `"files"` (MySQL not running or empty; then accounts and answers are kept in memory and lost on restart).
 
-### Student web app (Phase 3a)
+### Student web app
 
 With the server running, open **http://127.0.0.1:8000/app/** (or just http://127.0.0.1:8000/).
-Sign up → 4-step assessment (6 interests, 8 skills, 8 subjects, review) → top 10 matches with reasons →
-career details (readiness, skill gaps, similar careers) → career search. Everything is saved in MySQL.
-The page has no engine of its own: `frontend/app/api.js` holds every API call, `app.js` the screens,
-`styles.css` the look (same as the prototype). `frontend/prototype/` stays as the offline v1 demo.
+
+| Page | What it does |
+|---|---|
+| Quiz `#/quiz` | 24 questions, one at a time (6 interests, 8 skills, 8 subjects, where you want to work, optional "about you") |
+| My matches `#/matches` | top 10 careers from different fields with reasons; plus careers matching your own words (Sentence-BERT or TF-IDF) |
+| Career `#/career/<id>` | description, every important O*NET skill/knowledge (to build / have / check yourself), preparation, salary (only from a cited source), job links for your city, similar careers |
+| Roadmap `#/roadmap/<id>` | qualification → skills in priority order → experience → applying; tick steps, progress is saved |
+| Explore `#/explore` | 27 industries (Medicine, Engineering, Beauty & Wellness, Agriculture, Film/Bollywood, …) and search |
+| Ask `#/assistant` | career assistant chat (Gemini, answers only from our career records) |
+
+The page has no engine of its own: `frontend/app/api.js` holds every API call; one small file per page
+(`quiz.js`, `matches.js`, `career.js`, `roadmap.js`, `explore.js`, `assistant.js`), `core.js` the shared parts.
+
+### Settings you can change without code (`config/`)
+
+* `india_exclusions.csv` – careers never recommended in India (now: gambling jobs), each with a reason.
+* `industries.csv` – the Explore categories (which O*NET codes belong to each).
+* `salary_india.csv` – salaries, **only with a source**; empty until the team adds verified numbers.
+
+### Optional extras
+
+* **Chatbot:** get a free key at https://aistudio.google.com and put `GEMINI_API_KEY=...` in `.env`.
+  Without it the assistant runs in offline mode (lists matching careers).
+* **Sentence-BERT:** `pip install -r requirements-ml.txt` (large download). Without it "matches for your
+  own words" uses TF-IDF. The page always says which method was used.
 
 | Endpoint | Login? | What it does |
 |---|---|---|
