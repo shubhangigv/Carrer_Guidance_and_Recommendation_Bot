@@ -68,6 +68,7 @@ def models():
 def engine_predictions(tidy, data, field_map):
     """The survey field of engine v2's top-1 career for each student (None if outside every field)."""
     preds = []
+    print(f"  running the engine for {len(tidy)} students ...", flush=True)
     for _, r in tidy.iterrows():
         top = recommend_v2(to_student(r), data, top_n=1, min_job_zone=3, diversity=True)
         preds.append(field_of_code(top["code"].iloc[0], field_map) if len(top) else None)
@@ -84,6 +85,7 @@ def run(X, y, engine_pred=None, repeats=REPEATS):
     k = int(min(5, pd.Series(y).value_counts().min()))
     rows, best_preds = [], {}
     for name, model in models().items():
+        print(f"  cross-validating {name} ...", flush=True)
         accs, f1s = [], []
         for rep in range(repeats):
             cv = StratifiedKFold(n_splits=k, shuffle=True, random_state=SEED + rep)

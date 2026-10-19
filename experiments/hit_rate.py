@@ -63,7 +63,9 @@ def evaluate(tidy, data, field_map, ks=KS):
     pool = list(eligible_codes(data, MIN_JOB_ZONE))
     kmax = max(ks)
     rows = []
-    for _, r in tidy.iterrows():
+    for i, (_, r) in enumerate(tidy.iterrows(), start=1):
+        if i == 1 or i % 10 == 0 or i == len(tidy):
+            print(f"  ranking careers for student {i} of {len(tidy)} ...", flush=True)
         field = r["aimed_field"]
         prefixes = field_map[field]
         tops = {
