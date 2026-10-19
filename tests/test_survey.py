@@ -70,6 +70,10 @@ def test_load_survey_and_engine_input(survey_csv):
 
 
 def test_parse_cell():
+    assert parse_cell("5 (High)", "interest") == 5 and parse_cell("1 (Low)", "interest") == 1
+    assert parse_cell("3 = it is okay", "interest") == 3 and parse_cell("4.0", "skill") == 4
+    with pytest.raises(ValueError):
+        parse_cell("10", "skill")
     assert parse_cell("4", "skill") == 4 and parse_cell("No experience", "skill") == "no_experience"
     assert parse_cell("Can't assess", "skill") == "cant_assess" and parse_cell("Not studied", "subject") == "not_studied"
     assert parse_cell("", "skill") is None
@@ -139,3 +143,17 @@ def test_survey_analysis_runs(survey_csv, tmp_path):
                          "--clean-out", str(tmp_path / "clean.csv")])
     text = (tmp_path / "out" / "survey_summary.md").read_text(encoding="utf-8")
     assert "31 responses" in text and "Q3 by year of study" in text
+
+
+def test_labelled_scale_and_all_unknown_answers_reported(tmp_path):
+    path = fake_form_csv(tmp_path / "r.csv")
+    df = pd.read_csv(path, dtype=str)
+    col = f"{Q5} [{list(INTEREST_ROWS)[0]}]"
+    df[col] = df[col].map(lambda v: f"{v} (High)" if v == "5" else f"{v} (Low)" if v == "1" else v)
+    df.to_csv(path, index=False)
+    assert load_survey(path)["Realistic"].between(1, 5).all()      # labelled answers are read as numbers
+    df.loc[0, f"{Q6} [Programming]"] = "Expert"
+    df.loc[1, f"{Q7} [Biology]"] = "Sometimes"
+    df.to_csv(path, index=False)
+    with pytest.raises(ValueError, match=r"Q6: \['Expert'\].*Q7: \['Sometimes'\]"):
+        load_survey(path)

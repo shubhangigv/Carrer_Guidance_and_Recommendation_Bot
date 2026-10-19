@@ -64,8 +64,9 @@ def parse_cell(value, kind):
     if value is None or (isinstance(value, float) and np.isnan(value)) or str(value).strip() == "":
         return None
     text = str(value).strip()
-    if re.fullmatch(r"[1-5](\.0)?", text):
-        return int(float(text))
+    m = re.match(r"^([1-5])(\.0)?(?![0-9.])", text)      # "4", "4.0", "5 (High)", "1 - Low", "3 = it is okay"
+    if m:
+        return int(m.group(1))
     key = _norm(text)
     if key in ("no experience", "never tried", "i have never tried it"):
         return "no_experience"
@@ -85,11 +86,26 @@ def load_survey(path=DEFAULT_SURVEY):
     out["response_id"] = range(1, len(raw) + 1)
     for name in SINGLE.values():
         out[name] = raw[cols[name]].str.strip()
+    unknown = {}                                    # question -> answers we could not read (all reported at once)
+
+    def read(values, kind, question):
+        parsed = []
+        for v in values:
+            try:
+                parsed.append(parse_cell(v, kind))
+            except ValueError:
+                unknown.setdefault(question, set()).add(str(v))
+                parsed.append(None)
+        return parsed
+
     for row, riasec in INTEREST_ROWS.items():
-        out[riasec] = [parse_cell(v, "interest") for v in raw[cols[f"interest:{row}"]]]
-    for prefix in ("skill", "subject"):
+        out[riasec] = read(raw[cols[f"interest:{row}"]], "interest", "Q5")
+    for prefix, question in (("skill", "Q6"), ("subject", "Q7")):
         for row in GRIDS[6 if prefix == "skill" else 7][1]:
-            out[f"{prefix}:{row}"] = [parse_cell(v, prefix) for v in raw[cols[f"{prefix}:{row}"]]]
+            out[f"{prefix}:{row}"] = read(raw[cols[f"{prefix}:{row}"]], prefix, question)
+    if unknown:
+        raise ValueError("Some survey answers could not be read (add them to parse_cell in ml/survey.py): " +
+                         "; ".join(f"{q}: {sorted(v)}" for q, v in unknown.items()))
     return out
 
 
