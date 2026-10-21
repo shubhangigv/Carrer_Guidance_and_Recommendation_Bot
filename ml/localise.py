@@ -76,7 +76,33 @@ def short_titles(data, onet_dir=None):
     found, info = _my_next_move_titles(onet_dir) if onet_dir is not None else ({}, "no O*NET folder; titles trimmed")
     data.setdefault("extras_info", []).append(info)
     official = data["occupations"]["Title"]
-    return pd.Series({code: pick_short_title(t, found.get(code, [])) for code, t in official.items()})
+    short = pd.Series({code: pick_short_title(t, found.get(code, [])) for code, t in official.items()})
+    return disambiguate(short, official)
+
+
+MAX_TITLE = 45               # a shared short title is replaced by the trimmed official title if it is this short
+
+
+def disambiguate(short, official):
+    """Short titles shared by several careers ('Professor', 'Engineer' ...) are made specific, so a list of
+    matches never shows the same name twice for different careers:
+      'X Teachers, Postsecondary'  -> 'Professor (X)'
+      official title (trimmed) <= MAX_TITLE characters -> that title, e.g. 'Ship Engineers'
+      otherwise -> 'Short (first part of the official title)', cut at MAX_TITLE characters."""
+    shared = short.duplicated(keep=False)
+    out = short.copy()
+    for code in short.index[shared]:
+        full = clean_title(official[code])
+        prof = re.match(r"^(.+?) Teachers, Postsecondary$", str(official[code]))
+        if prof:
+            out[code] = f"Professor ({prof.group(1)})"
+        elif len(full) <= MAX_TITLE:
+            out[code] = full
+        else:
+            first = full.split(",")[0]
+            label = f"{short[code]} ({first})"
+            out[code] = label if len(label) <= MAX_TITLE + 15 else label[:MAX_TITLE + 12].rsplit(" ", 1)[0] + "…)"
+    return out
 
 
 def load_exclusions(path=EXCLUSIONS_FILE):

@@ -263,3 +263,16 @@ def test_pathway_endpoint(client):
     p = client.get(f"/careers/{cid}/pathway").json()
     assert p["display_title"] == "Research Scientist" and p["stream"]["stream"].startswith("Science")
     assert p["routes"] == [] and p["courses"] == {}          # no route covers 19-0001 in the fake data
+
+
+def test_shared_short_titles_are_made_specific():
+    import pandas as pd
+    from ml.localise import disambiguate
+    short = pd.Series({"a": "Professor", "b": "Professor", "c": "Engineer", "d": "Engineer", "e": "Nurse"})
+    official = pd.Series({"a": "Engineering Teachers, Postsecondary", "b": "Nursing Instructors and Teachers, Postsecondary",
+                          "c": "Ship Engineers", "d": "Automotive Engineers", "e": "Registered Nurses"})
+    out = disambiguate(short, official)
+    assert out["a"] == "Professor (Engineering)" and out["b"] == "Professor (Nursing Instructors and)" or out["b"].startswith("Professor (")
+    assert out["c"] == "Ship Engineers" and out["d"] == "Automotive Engineers"
+    assert out["e"] == "Nurse"                                   # a unique short title is kept
+    assert not out.duplicated().any()
