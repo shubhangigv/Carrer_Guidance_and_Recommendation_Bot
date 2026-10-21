@@ -1,0 +1,47 @@
+file,rows,cols,columns
+Abilities to Work Activities.txt,381,4,Abilities Element ID | Abilities Element Name | Work Activities Element ID | Work Activities Element Name
+Abilities to Work Context.txt,139,4,Abilities Element ID | Abilities Element Name | Work Context Element ID | Work Context Element Name
+Abilities.txt,94640,13,O*NET-SOC Code | Element ID | Element Name | Scale ID | Data Value | N | Standard Error | Lower CI Bound | Upper CI Bound | Recommend Suppress | Not Relevant | Date | Domain Source
+Career Interest Type Keywords.txt,75,4,Element ID | Element Name | Keyword | Keyword Type
+Career Interest Types.txt,8307,7,O*NET-SOC Code | Element ID | Element Name | Scale ID | Data Value | Date | Domain Source
+Content Model Reference.txt,3006,3,Element ID | Element Name | Description
+Education Categories.txt,24,5,Element ID | Element Name | Scale ID | Category | Category Description
+Education.txt,11495,13,O*NET-SOC Code | Element ID | Element Name | Scale ID | Category | Data Value | N | Standard Error | Lower CI Bound | Upper CI Bound | Recommend Suppress | Date | Domain Source
+Emerging Tasks.txt,338,7,O*NET-SOC Code | Task | Category | Original Task ID | Original Task | Date | Domain Source
+Essential Skills to Work Activities.txt,110,4,Essential Skills Element ID | Essential Skills Element Name | Work Activities Element ID | Work Activities Element Name
+Essential Skills to Work Context.txt,39,4,Essential Skills Element ID | Essential Skills Element Name | Work Context Element ID | Work Context Element Name
+Essential Skills.txt,18200,13,O*NET-SOC Code | Element ID | Element Name | Scale ID | Data Value | N | Standard Error | Lower CI Bound | Upper CI Bound | Recommend Suppress | Not Relevant | Date | Domain Source
+GWAs to IWAs to DWAs.txt,2087,4,GWA Element ID | IWA Element ID | DWA Element ID | DWA Element Name
+GWAs to IWAs.txt,332,3,GWA Element ID | IWA Element ID | IWA Element Name
+Interests Illustrative Activities.txt,188,4,Element ID | Element Name | Interest Type | Activity
+Interests Illustrative Occupations.txt,186,4,Element ID | Element Name | Interest Type | O*NET-SOC Code
+Job Titles.txt,54269,4,O*NET-SOC Code | Job Title | Short Title | Source(s)
+Job Zone Reference.txt,4,7,Job Zone | Name | Experience | Education | Job Training | Examples | SVP Range
+Job Zones.txt,923,4,O*NET-SOC Code | Job Zone | Date | Domain Source
+Knowledge.txt,60060,13,O*NET-SOC Code | Element ID | Element Name | Scale ID | Data Value | N | Standard Error | Lower CI Bound | Upper CI Bound | Recommend Suppress | Not Relevant | Date | Domain Source
+Level Scale Anchors.txt,483,5,Element ID | Element Name | Scale ID | Anchor Value | Anchor Description
+Occupation Data.txt,1016,3,O*NET-SOC Code | Title | Description
+Occupation Level Metadata.txt,32280,6,O*NET-SOC Code | Item | Response | N | Percent | Date
+Read Me.txt,10,1,O*NET 31.0 Database
+Related Occupations.txt,18460,4,O*NET-SOC Code | Related O*NET-SOC Code | Relatedness Tier | Index
+Sample of Reported Titles.txt,8189,3,O*NET-SOC Code | Reported Job Title | Shown in My Next Move
+Scales Reference.txt,33,4,Scale ID | Scale Name | Minimum | Maximum
+Software Skills.txt,31821,6,O*NET-SOC Code | Workplace Example | Element ID | Element Name | Hot Technology | In Demand
+Specific Interest Areas to Career Interest Types.txt,53,4,Specific Interest Areas Element ID | Specific Interest Areas Element Name | Career Interest Types Element ID | Career Interest Types Element Name
+Specific Interest Areas.txt,73062,7,O*NET-SOC Code | Element ID | Element Name | Scale ID | Data Value | Date | Domain Source
+Survey Booklet Locations.txt,211,4,Element ID | Element Name | Survey Item Number | Scale ID
+Task Categories.txt,7,3,Scale ID | Category | Category Description
+Task Ratings.txt,165780,12,O*NET-SOC Code | Task ID | Scale ID | Category | Data Value | N | Standard Error | Lower CI Bound | Upper CI Bound | Recommend Suppress | Date | Domain Source
+Task Statements.txt,18838,7,O*NET-SOC Code | Task ID | Task | Task Type | Incumbents Responding | Date | Domain Source
+Tasks to DWAs.txt,24087,5,O*NET-SOC Code | Task ID | DWA Element ID | Date | Domain Source
+Training and Experience Categories.txt,29,5,Element ID | Element Name | Scale ID | Category | Category Description
+Training and Experience.txt,26812,13,O*NET-SOC Code | Element ID | Element Name | Scale ID | Category | Data Value | N | Standard Error | Lower CI Bound | Upper CI Bound | Recommend Suppress | Date | Domain Source
+Transferable Skills to Work Activities.txt,122,4,Transferable Skills Element ID | Transferable Skills Element Name | Work Activities Element ID | Work Activities Element Name
+Transferable Skills to Work Context.txt,57,4,Transferable Skills Element ID | Transferable Skills Element Name | Work Context Element ID | Work Context Element Name
+Transferable Skills.txt,45500,13,O*NET-SOC Code | Element ID | Element Name | Scale ID | Data Value | N | Standard Error | Lower CI Bound | Upper CI Bound | Recommend Suppress | Not Relevant | Date | Domain Source
+Work Activities.txt,74702,13,O*NET-SOC Code | Element ID | Element Name | Scale ID | Data Value | N | Standard Error | Lower CI Bound | Upper CI Bound | Recommend Suppress | Not Relevant | Date | Domain Source
+Work Context Categories.txt,281,5,Element ID | Element Name | Scale ID | Category | Category Description
+Work Context.txt,305389,14,O*NET-SOC Code | Element ID | Element Name | Scale ID | Category | Data Value | N | Standard Error | Lower CI Bound | Upper CI Bound | Recommend Suppress | Not Relevant | Date | Domain Source
+Work Styles to Work Activities.txt,303,4,Work Styles Element ID | Work Styles Element Name | Work Activities Element ID | Work Activities Element Name
+Work Styles to Work Context.txt,266,4,Work Styles Element ID | Work Styles Element Name | Work Context Element ID | Work Context Element Name
+Work Styles.txt,37422,7,O*NET-SOC Code | Element ID | Element Name | Scale ID | Data Value | Date | Domain Source
