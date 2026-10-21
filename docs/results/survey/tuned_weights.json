@@ -1,0 +1,17 @@
+{
+  "weights": {
+    "interest": 0.3,
+    "skill": 0.4,
+    "subject": 0.3,
+    "fit_share": 0.75
+  },
+  "cv_hit_rate": {
+    "cv_hit@1": 0.162,
+    "cv_hit@3": 0.29,
+    "cv_hit@5": 0.371
+  },
+  "students": 69,
+  "folds": 5,
+  "repeats": 5,
+  "note": "cv_hit_rate is the honest estimate; the final weights were then chosen on all students"
+}

@@ -120,7 +120,7 @@ def test_hit_rate_runs_on_fake_onet(survey_csv, onet_dir, tmp_path):
     hit_rate.main(["--survey", str(survey_csv), "--onet-dir", str(onet_dir), "--out", str(tmp_path / "out"),
                    "--processed", str(tmp_path / "processed")])
     summary = pd.read_csv(tmp_path / "out" / "hit_rate.csv")
-    assert set(summary["method"]) == {"v2", "v2_no_div", "v1", "random"}
+    assert set(summary["method"]) == {"v2", "v2_no_div", "v3", "v1", "random"}
     assert (summary["students"] == 30).all()                     # "Not sure yet" left out
     assert summary["hit_rate"].between(0, 1).all()
     assert "not_sure_skipped=1" in (tmp_path / "out" / "hit_rate_counts.txt").read_text()
@@ -135,6 +135,17 @@ def test_ml_compare_runs_without_leakage(survey_csv, onet_dir, tmp_path):
     majority = table.set_index("model").loc["majority", "accuracy_mean"]
     assert math.isclose(majority, 10 / 30, abs_tol=0.01)          # 3 equal classes -> 1/3
     assert (tmp_path / "out" / "ml_feature_importance.csv").exists()
+
+
+def test_tune_weights_runs_with_cross_validation(survey_csv, onet_dir, tmp_path):
+    import json
+    import tune_weights
+    tune_weights.main(["--survey", str(survey_csv), "--onet-dir", str(onet_dir), "--out", str(tmp_path / "out"),
+                       "--repeats", "1"])
+    saved = json.loads((tmp_path / "out" / "tuned_weights.json").read_text())
+    assert sum(saved["weights"][k] for k in ("interest", "skill", "subject")) == pytest.approx(1)
+    assert all(0 <= v <= 1 for v in saved["cv_hit_rate"].values())
+    assert saved["students"] == 30                                 # "Not sure yet" left out
 
 
 def test_survey_analysis_runs(survey_csv, tmp_path):
