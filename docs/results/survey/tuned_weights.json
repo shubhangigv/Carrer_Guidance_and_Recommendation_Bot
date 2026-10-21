@@ -1,14 +1,14 @@
 {
   "weights": {
-    "interest": 0.3,
-    "skill": 0.4,
-    "subject": 0.3,
+    "interest": 0.1,
+    "skill": 0.7,
+    "subject": 0.2,
     "fit_share": 0.75
   },
   "cv_hit_rate": {
-    "cv_hit@1": 0.162,
-    "cv_hit@3": 0.29,
-    "cv_hit@5": 0.371
+    "cv_hit@1": 0.131,
+    "cv_hit@3": 0.252,
+    "cv_hit@5": 0.299
   },
   "students": 69,
   "folds": 5,

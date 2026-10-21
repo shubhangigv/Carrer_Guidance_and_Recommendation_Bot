@@ -135,6 +135,8 @@ PAGES.quiz = async () => {
       if (at >= 0) picked.splice(at, 1);
       else if (picked.length < most) picked.push(v);
       else return toast(`You can pick up to ${most}. Unpick one first.`);
+      if (qn.key === "weaknesses" && picked.includes(v) && Number(state.draft.skills[v]) >= 3)
+        toast(`You rated ${v} as ${SKILL_SCALE[state.draft.skills[v] - 1].toLowerCase()} earlier - we will count it as weak.`);
       if (qn.key === "strengths") {                    // a strength cannot also be a weakness
         const w = state.draft.profile.weaknesses;
         state.draft.profile.weaknesses = w.filter(x => !picked.includes(x));
