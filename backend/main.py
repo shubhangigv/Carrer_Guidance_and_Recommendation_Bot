@@ -30,14 +30,17 @@ from backend import schemas
 from backend.db import PROJECT_ROOT, get_engine, update_schema
 from backend.deps import (MIN_JOB_ZONE, MODEL_VERSION, AppContext, career_brief, career_code, current_student,
                           get_context, holder, num, own_assessment)
+from backend.deps import personal_recommend
 from backend.repository import EmailTaken, MemoryRepository, SqlRepository
 from backend.routes import assistant, explore, roadmap
 from backend.security import create_token, expire_minutes, hash_password, verify_password
 from ml.localise import apply_local_rules
 from ml.pathways import load_education
+from ml.preferences import (FURTHER_STUDY, MAX_AREAS, MAX_STRENGTHS, MAX_WEAKNESSES, WORK_SETTINGS,
+                            add_work_context, clean_profile)
 from ml.semantic import LazyMatcher
 from ml.recommender_v2 import (add_extras, explain_v2, field_of, load_from_mysql, load_onet_v2,
-                               questions_needed, recommend_v2, target_career)
+                               questions_needed, target_career)
 
 log = logging.getLogger("pathfinder")
 ONET_DIR = Path(os.getenv("PATHFINDER_ONET_DIR", PROJECT_ROOT / "data" / "raw" / "onet"))
@@ -68,6 +71,7 @@ def build_context():
     if has_files:
         data["education"], info = load_education(ONET_DIR)    # O*NET education levels (US), for career pages
         data["extras_info"].append(info)
+        add_work_context(data, ONET_DIR)      # desk / outdoor ratings for the work-setting preference
     for line in data.get("extras_info", []):
         log.info(line)
     ctx = AppContext(data, repo, repo.career_ids(data), source)
@@ -166,8 +170,14 @@ def save_assessment(body: schemas.AssessmentIn, student_id: int = Depends(curren
             answers.append({"category": category, "item": item, "rating": ans.rating if rated else None,
                             "answer_status": "rated" if rated else ans})
     clean = lambda v: (v or "").strip() or None          # noqa: E731
+    profile = None
+    if body.profile is not None:
+        try:
+            profile = clean_profile(body.profile.model_dump(), ctx.areas, ctx.study_courses)
+        except ValueError as err:
+            raise HTTPException(422, f"profile: {err}")
     assessment_id = ctx.repo.create_assessment(student_id, answers, clean(body.preferred_location),
-                                               clean(body.about_me))
+                                               clean(body.about_me), profile)
     statuses = [a["answer_status"] for a in answers if a["category"] != "interest"]
     return {"assessment_id": assessment_id, "rated": statuses.count("rated"),
             "no_experience_or_not_studied": statuses.count("no_experience") + statuses.count("not_studied"),
@@ -177,25 +187,62 @@ def save_assessment(body: schemas.AssessmentIn, student_id: int = Depends(curren
 @app.get("/recommend", response_model=schemas.RecommendResponse, tags=["recommendations"])
 def recommend(assessment_id: int, top_n: int = Query(10, ge=1, le=50),
               student_id: int = Depends(current_student), ctx: AppContext = Depends(get_context)):
+    """Top careers: quiz scores (engine v3) + the student's areas, course, lifestyle and hidden careers."""
     student = own_assessment(ctx, assessment_id, student_id)
-    recs = recommend_v2(student, ctx.data, top_n=top_n, min_job_zone=MIN_JOB_ZONE, diversity=True)
+    recs, info = personal_recommend(ctx, student, top_n=top_n, hidden_ids=ctx.repo.hidden_careers(student_id))
+    labels = ctx.areas["label"]
     out, saved = [], []
     for _, r in recs.iterrows():
         reasons, _ = explain_v2(student, ctx.data, r["code"])
+        reasons = list(r["extra_reasons"]) + reasons       # "in an area you picked" ... first
         hide = r["display"] == "withheld"            # withheld: show the interest fit only
         out.append({
             "rank": int(r["rank"]), "career_id": ctx.career_ids[r["code"]], "code": r["code"],
             "career": r["career"], "display_title": ctx.display_title(r["code"]),
+            "summary": ctx.summary(r["code"]),
             "field": r["field"], "display": r["display"],
             "interest_fit": num(r["interest_fit"]),
             **{k: None if hide else num(r[k], 1 if k.startswith("match") else 3)
                for k in ("match_low", "match_high", "skill_low", "skill_high", "subject_low", "subject_high")},
             "coverage": num(r["coverage"]), "critical_unknowns": list(r["critical_unknowns"]),
-            "follow_ups": [_follow_up(f) for f in r["follow_ups"]], "reasons": reasons})
+            "follow_ups": [_follow_up(f) for f in r["follow_ups"]], "reasons": reasons,
+            "group": r["group"], "areas": [labels[k] for k in r["area_keys"]], "course_link": bool(r["course_link"])})
         saved.append({"code": r["code"], "match_score": float(r["match_low"]), "reasons": reasons,
                       "model_version": MODEL_VERSION})
     ctx.repo.save_recommendations(student_id, assessment_id, saved, ctx.career_ids)
-    return {"assessment_id": assessment_id, "model_version": MODEL_VERSION, "recommendations": out}
+    return {"assessment_id": assessment_id, "model_version": MODEL_VERSION, **info, "recommendations": out}
+
+
+@app.get("/quiz/options", response_model=schemas.QuizOptions, tags=["assessment"])
+def quiz_options(ctx: AppContext = Depends(get_context)):
+    """The choices for the quiz's area, course and lifestyle questions (from config/)."""
+    opts = lambda df, ex=True: [{"key": k, "label": r["label"], "example": r.get("example", "") if ex else ""}  # noqa: E731
+                                for k, r in df.iterrows()]
+    return {"areas": opts(ctx.areas), "courses": opts(ctx.study_courses, ex=False),
+            "work_settings": [{"key": k, "label": v} for k, v in WORK_SETTINGS.items()],
+            "further_study": [{"key": k, "label": v} for k, v in FURTHER_STUDY.items()],
+            "max_areas": MAX_AREAS, "max_strengths": MAX_STRENGTHS, "max_weaknesses": MAX_WEAKNESSES}
+
+
+@app.get("/feedback/hidden", response_model=schemas.HiddenOut, tags=["recommendations"])
+def hidden_careers(student_id: int = Depends(current_student), ctx: AppContext = Depends(get_context)):
+    """Careers this student marked "not for me"."""
+    return {"career_ids": sorted(ctx.repo.hidden_careers(student_id))}
+
+
+@app.put("/feedback/hidden/{career_id}", response_model=schemas.HiddenOut, tags=["recommendations"])
+def hide_career(career_id: int, student_id: int = Depends(current_student), ctx: AppContext = Depends(get_context)):
+    """Mark a career "not for me": it is left out of this student's matches from now on."""
+    career_code(ctx, career_id)                       # 404 if the career does not exist
+    ctx.repo.set_hidden(student_id, career_id, True)
+    return {"career_ids": sorted(ctx.repo.hidden_careers(student_id))}
+
+
+@app.delete("/feedback/hidden/{career_id}", response_model=schemas.HiddenOut, tags=["recommendations"])
+def unhide_career(career_id: int, student_id: int = Depends(current_student), ctx: AppContext = Depends(get_context)):
+    """Undo "not for me"."""
+    ctx.repo.set_hidden(student_id, career_id, False)
+    return {"career_ids": sorted(ctx.repo.hidden_careers(student_id))}
 
 
 @app.get("/careers/search", response_model=list[schemas.CareerBrief], tags=["careers"])

@@ -11,8 +11,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend import assistant, schemas
 from backend.deps import (MIN_JOB_ZONE, AppContext, career_brief, career_code, get_context, optional_student,
-                          own_assessment)
-from ml.recommender_v2 import recommend_v2
+                          own_assessment, personal_recommend)
+from ml.recommender_v2 import eligible_codes
 
 router = APIRouter(tags=["assistant"])
 
@@ -27,9 +27,10 @@ def _matcher(ctx, timeout=60):
 @router.post("/match/text", response_model=schemas.TextMatchOut)
 def match_text(body: schemas.TextMatchIn, ctx: AppContext = Depends(get_context)):
     m = _matcher(ctx)
+    pool = eligible_codes(ctx.data, MIN_JOB_ZONE)        # same careers as the quiz (Job Zone >= 3)
     return {"method": m.method,
             "results": [{**career_brief(ctx, code), "similarity": sim}
-                        for code, sim in m.match(body.text, top_n=body.top_n) if code in ctx.career_ids]}
+                        for code, sim in m.match(body.text, top_n=body.top_n, codes=pool) if code in ctx.career_ids]}
 
 
 @router.get("/assistant/status", response_model=schemas.AssistantStatus)
@@ -46,7 +47,7 @@ def _student_summary(ctx, student_id):
     if not aid:
         return None
     answers = own_assessment(ctx, aid, student_id)
-    top = recommend_v2(answers, ctx.data, top_n=5, min_job_zone=MIN_JOB_ZONE, diversity=True)
+    top, _ = personal_recommend(ctx, answers, top_n=5, hidden_ids=ctx.repo.hidden_careers(student_id))
     return {"answers": answers, "top": [ctx.display_title(c) for c in top["code"]], "codes": list(top["code"])}
 
 

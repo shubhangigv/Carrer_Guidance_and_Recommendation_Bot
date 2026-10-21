@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 from fastapi.testclient import TestClient  # noqa: E402
 
-from backend.main import AppContext, app, get_context  # noqa: E402
+from backend.main import MODEL_VERSION, AppContext, app, get_context  # noqa: E402
 from backend.repository import MemoryRepository, SqlRepository  # noqa: E402
 from ml.recommender_v2 import load_onet_v2  # noqa: E402
 
@@ -136,7 +136,7 @@ def test_assessment_then_recommend(client, ctx):
     assert any("Investigative" in reason for reason in recs[0]["reasons"])
     assert "Helper" not in [x["career"] for x in recs]            # Job Zone 1 is filtered out
     saved = ctx.repo.recommendations
-    assert len(saved) == len(recs) and all(s["model_version"] == "v2" for s in saved)
+    assert len(saved) == len(recs) and all(s["model_version"] == MODEL_VERSION for s in saved)
 
 
 def test_cant_assess_gives_a_range_and_follow_ups(client):
@@ -246,7 +246,7 @@ def test_flow_with_mysql_repository(onet_dir, onet, old_database):
             stored = conn.execute(sqlalchemy.text(
                 "SELECT rating, answer_status FROM assessment_rating WHERE item = 'Research'")).one()
             versions = conn.execute(sqlalchemy.text("SELECT DISTINCT model_version FROM recommendation")).scalars().all()
-        assert tuple(stored) == (None, "cant_assess") and versions == ["v2"]
+        assert tuple(stored) == (None, "cant_assess") and versions == [MODEL_VERSION]
         # roadmap progress and the "me" endpoint are stored in MySQL too
         cid = recs[0]["career_id"]
         r = client.put(f"/roadmap/{cid}/progress", json={"step_key": "education", "done": True}, headers=headers)
@@ -285,3 +285,53 @@ def test_web_app_questions_match_the_engine():
     assert first_values("SKILL_ROWS") == list(SKILL_MAP_V2)
     assert first_values("SUBJECT_ROWS") == list(SUBJECT_MAP_V2)
     assert first_values("INTEREST_ROWS") == ["Realistic", "Investigative", "Artistic", "Social", "Enterprising", "Conventional"]
+
+
+# ---------------------------------------------------------------- areas, course, lifestyle, "not for me"
+def test_quiz_options_come_from_config(client):
+    from ml.preferences import load_areas, load_courses
+    opts = client.get("/quiz/options").json()
+    assert [a["key"] for a in opts["areas"]] == list(load_areas().index)
+    assert [c["key"] for c in opts["courses"]] == list(load_courses().index)
+    assert opts["max_areas"] == 3 and {o["key"] for o in opts["work_settings"]} == {"desk", "active", "any"}
+
+
+def test_profile_is_saved_and_used(client):
+    headers = login(client)
+    body = {**FULL_ANSWERS, "profile": {"areas": ["science"], "course": "bsc_science", "strengths": ["Research"],
+                                        "weaknesses": ["Leadership"], "work_setting": "any", "further_study": "any"}}
+    aid = client.post("/assessment", json=body, headers=headers).json()["assessment_id"]
+    res = client.get("/recommend", params={"assessment_id": aid}, headers=headers).json()
+    assert res["areas_from"] == "picked" and res["chosen_areas"] == ["Science & research"]
+    assert all(r["group"] in {"your_areas", "also_consider"} for r in res["recommendations"])
+
+
+def test_bad_profile_is_rejected(client):
+    headers = login(client)
+    for profile in ({"areas": ["nope"]}, {"course": "nope"}, {"strengths": ["Writing"], "weaknesses": ["Writing"]},
+                    {"work_setting": "moon"}):
+        r = client.post("/assessment", json={**FULL_ANSWERS, "profile": profile}, headers=headers)
+        assert r.status_code == 422, profile
+
+
+def test_not_for_me_hides_and_undo_brings_back(client, ctx):
+    headers = login(client)
+    aid = client.post("/assessment", json=FULL_ANSWERS, headers=headers).json()["assessment_id"]
+    codes = lambda: [r["code"] for r in client.get("/recommend", params={"assessment_id": aid},  # noqa: E731
+                                                     headers=headers).json()["recommendations"]]
+    assert codes()[0] == LAB
+    lab_id = ctx.career_ids[LAB]
+    assert client.put(f"/feedback/hidden/{lab_id}", headers=headers).json() == {"career_ids": [lab_id]}
+    assert LAB not in codes()
+    assert client.delete(f"/feedback/hidden/{lab_id}", headers=headers).json() == {"career_ids": []}
+    assert codes()[0] == LAB
+    assert client.put("/feedback/hidden/999999", headers=headers).status_code == 404
+
+
+def test_each_match_says_what_the_job_is(client, ctx):
+    headers = login(client)
+    aid = client.post("/assessment", json=FULL_ANSWERS, headers=headers).json()["assessment_id"]
+    recs = client.get("/recommend", params={"assessment_id": aid}, headers=headers).json()["recommendations"]
+    lab = next(r for r in recs if r["code"] == LAB)
+    description = str(ctx.data["occupations"].loc[LAB, "Description"])
+    assert lab["summary"] and description.startswith(lab["summary"].rstrip(".…"))

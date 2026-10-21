@@ -4,9 +4,11 @@
 
 const PAGES = {};                                   // name -> function(params) that draws the page
 const STATE_KEY = "pathfinder.state";
-const blankState = () => ({ name: "", email: "", assessmentId: null, location: "", aboutMe: "", recs: null,
-                            draft: { interests: {}, skills: {}, subjects: {} }, quizStep: 0 });
+const blankProfile = () => ({ areas: [], course: null, strengths: [], weaknesses: [], work_setting: null, further_study: null });
+const blankState = () => ({ name: "", email: "", assessmentId: null, location: "", aboutMe: "", recs: null, recInfo: null,
+                            draft: { interests: {}, skills: {}, subjects: {}, profile: blankProfile() }, quizStep: 0 });
 let state = loadState() || blankState();
+state.draft.profile = { ...blankProfile(), ...(state.draft.profile || {}) };   // older saved state had no profile
 
 function loadState() { try { return JSON.parse(sessionStorage.getItem(STATE_KEY)); } catch (e) { return null; } }
 function saveState() { try { sessionStorage.setItem(STATE_KEY, JSON.stringify(state)); } catch (e) { /* blocked */ } }

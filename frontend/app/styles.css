@@ -180,3 +180,11 @@ hr.rule { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 10
 footer.foot { max-width: 1080px; margin: 0 auto; padding: 24px 16px 40px; border-top: 1px solid var(--line); color: var(--faint); font-size: 13px; }
 .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 6px; font-size: 15px; z-index: 20; max-width: calc(100% - 32px); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* quiz: pick-several cards (areas, strongest / weakest skills) */
+.choices.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.choice.pick { min-height: 64px; }
+/* matches: group headings and the "what we used" notes */
+.group-title { font-size: 20px; margin: 22px 0 8px; }
+.group-title .soft { font-size: 15px; font-weight: 400; }
+.card.notes { margin-top: 14px; }

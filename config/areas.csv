@@ -1,0 +1,18 @@
+key,label,example,soc_prefixes
+tech,Computers & IT,"software, apps, websites, networks, cyber security",15-1;11-3021
+data,"Maths, data & statistics","data science, statistics, actuarial work, analysis",15-2
+engineering,Engineering & technology,"mechanical, civil, electrical, electronics, chemical",17;11-9041
+science,Science & research,"labs, physics, chemistry, biology, environment",19-1;19-2;19-4;11-9121
+health,Health & medicine,"doctor, nurse, pharmacy, therapy, lab tests",29;31;11-9111
+business,"Business, finance & accounts","accounting, banking, finance, HR, consulting",13;11-303;11-31
+management,Management & starting a business,"general manager, operations, HR, purchasing, your own business",11-1011;11-1021;11-30;11-31;11-9199
+marketing,Sales & marketing,"advertising, sales, brand, market research",41;11-2;13-1161
+law,"Law, government & public safety","lawyer, police, fire service, civil services",23;33;11-1031;11-9161
+teaching,Teaching & training,"school or college teaching, coaching, training",25;11-903
+helping,Helping people (social work & psychology),"counselling, psychology, social work, NGOs",21;19-303;11-9151
+arts,"Arts, design & media","design, film, music, writing, journalism, photography",27-1;27-3;27-4
+sports,Sports & fitness,"coaching, fitness training, sports",27-202;39-9031;11-9179.01
+nature,"Nature, farming & animals","agriculture, animals, forests, food science",45;19-101;19-103;19-2041;11-9013;29-1131
+hospitality,"Food, hotels & travel","chef, hotel, restaurant, tourism",35;39-7;11-9051;11-9081
+trades,"Building, repair & making things","construction, repair, machines, factories",47;49;51;11-9021
+transport,"Transport, aviation & logistics","pilot, ships, logistics, supply chain",53;11-3071;13-1081

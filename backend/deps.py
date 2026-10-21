@@ -5,21 +5,51 @@ AppContext   the O*NET data, the storage (MySQL or memory) and the India/industr
 get_context  FastAPI dependency that hands the AppContext to an endpoint (tests override it)
 current_student  the logged-in student's id from the "Authorization: Bearer <token>" header
 """
+import json
 import math
+import os
 from dataclasses import dataclass, field
 
 import jwt
 from fastapi import Depends, HTTPException, status
+from dotenv import load_dotenv
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from backend.security import read_token
 from ml.localise import clean_title, industries_of, load_industries, load_salaries, salary_for
 from ml.pathways import load_courses, load_routes
-from ml.recommender_v2 import field_of
+from ml.preferences import load_areas, load_courses as load_study_courses, personalised
+from ml.recommender_v2 import field_of, recommend_v2
+from ml.recommender_v3 import recommend_v3
 from ml.semantic import LazyMatcher, SemanticMatcher
 
-MODEL_VERSION = "v2"
+load_dotenv()
+# Which engine ranks careers: "v3" (v2 + strength fit; better Hit@k on the survey, see
+# docs/results/survey/hit_rate.csv) or "v2". Set ENGINE_VERSION in .env to switch back.
+MODEL_VERSION = os.getenv("ENGINE_VERSION", "v3").strip().lower()
+if MODEL_VERSION not in ("v2", "v3"):
+    raise ValueError(f"ENGINE_VERSION must be v2 or v3, got {MODEL_VERSION!r}")
 MIN_JOB_ZONE = 3
+
+
+def recommend(student, data, top_n=10):
+    """Top careers from the quiz answers only, with the engine chosen by ENGINE_VERSION
+    (Job Zone >= 3, field diversity on). The app uses personal_recommend below."""
+    engine = recommend_v3 if MODEL_VERSION == "v3" else recommend_v2
+    return engine(student, data, top_n=top_n, min_job_zone=MIN_JOB_ZONE, diversity=True)
+
+
+def personal_recommend(ctx, student, top_n=10, hidden_ids=()):
+    """Top careers using the student's areas, course, lifestyle and "not for me" choices (ml/preferences.py).
+    Returns (DataFrame, info). With ENGINE_VERSION=v2 the extra answers are not used (v2 has no such step)."""
+    hidden = {ctx.codes_by_id[i] for i in hidden_ids if i in ctx.codes_by_id}
+    if MODEL_VERSION == "v2":
+        recs = recommend(student, ctx.data, top_n + len(hidden))
+        recs = recs[~recs["code"].isin(hidden)].head(top_n).assign(rank=lambda d: range(1, len(d) + 1))
+        return recs.assign(group="all", area_keys=[[]] * len(recs), course_link=False,
+                           extra_reasons=[[]] * len(recs)), {"notes": [], "chosen_areas": [], "areas_from": None}
+    return personalised(student, ctx.data, student.get("profile"), top_n=top_n, hidden=hidden,
+                        min_job_zone=MIN_JOB_ZONE, areas=ctx.areas, courses=ctx.study_courses)
 
 
 @dataclass
@@ -32,10 +62,14 @@ class AppContext:
     salaries: list = field(default_factory=load_salaries)         # config/salary_india.csv (cited rows only)
     routes: list = field(default_factory=load_routes)             # config/career_paths.csv (Indian education routes)
     courses: list = field(default_factory=load_courses)           # config/courses.csv (checked courses only)
+    areas: object = field(default_factory=load_areas)             # config/areas.csv (areas a student can pick)
+    study_courses: object = None                                  # config/course_areas.csv (degree -> areas)
     matcher: object = None     # ml/semantic.py matcher (LazyMatcher at startup; built on first use otherwise)
 
     def __post_init__(self):
         self.codes_by_id = {cid: code for code, cid in self.career_ids.items()}
+        if self.study_courses is None:
+            self.study_courses = load_study_courses(areas=self.areas)
         self.ranked = set(self.data["codes"])
 
     # ---- small helpers the endpoints share
@@ -48,6 +82,14 @@ class AppContext:
         if short is not None and code in short.index:
             return str(short[code])
         return clean_title(self.official_title(code))
+
+    def summary(self, code, max_chars=180):
+        """First sentence of the O*NET description: what the job actually involves."""
+        text = str(self.data["occupations"].loc[code].get("Description") or "").strip()
+        first = text.split(". ")[0].rstrip(".")
+        if len(first) > max_chars:
+            first = first[:max_chars].rsplit(" ", 1)[0] + "…"
+        return first + ("." if first and not first.endswith("…") else "")
 
     def excluded_reason(self, code):
         return self.data.get("excluded", {}).get(code)
@@ -149,4 +191,5 @@ def own_assessment(ctx, assessment_id, student_id):
                                          else ans["answer_status"])
     student["preferred_location"] = a.get("preferred_location")
     student["about_me"] = a.get("about_me")
+    student["profile"] = json.loads(a["profile_json"]) if a.get("profile_json") else {}
     return student
