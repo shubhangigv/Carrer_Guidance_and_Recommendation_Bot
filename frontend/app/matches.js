@@ -9,6 +9,7 @@ async function loadRecs() {
   const res = await api.recommend(state.assessmentId, 10);
   state.recs = res.recommendations;
   state.recInfo = { notes: res.notes || [], chosenAreas: res.chosen_areas || [], areasFrom: res.areas_from };
+  try { state.ratings = (await api.ratings(state.assessmentId)).ratings; } catch (e) { state.ratings = {}; }
   saveState();
 }
 
@@ -43,6 +44,7 @@ PAGES.matches = async () => {
     <section id="wordsBox"></section>`);
   $("retake").onclick = () => { state.quizStep = QUESTIONS.length; saveState(); };
   document.querySelectorAll("[data-hide]").forEach(b => b.onclick = () => hideCareer(Number(b.dataset.hide), b));
+  document.querySelectorAll("[data-rate]").forEach(b => b.onclick = () => rateCareer(b));
   if ($("unhideAll")) $("unhideAll").onclick = unhideAll;
   if ($("fixFlat")) $("fixFlat").onclick = () => { state.quizStep = QUESTIONS.findIndex(q => q.key === "strengths"); saveState(); };
   if (state.aboutMe) renderWordMatches();
@@ -77,6 +79,17 @@ async function hideCareer(id, btn) {
   } catch (err) { btn.disabled = false; btn.textContent = "Not for me"; handle(err); }
 }
 
+// "Would you consider it?" 1-5: the student's own judgement of each match (used for the user test).
+async function rateCareer(b) {
+  const id = Number(b.dataset.rate), r = state.recs.find(x => x.career_id === id);
+  try {
+    const res = await api.rateCareer(id, { assessment_id: state.assessmentId, rating: Number(b.dataset.v),
+                                           shown_rank: r.rank, shown_group: r.group });
+    state.ratings = res.ratings; saveState();
+    b.parentElement.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  } catch (err) { handle(err); }
+}
+
 async function unhideAll() {
   try {
     const { career_ids } = await api.hidden();
@@ -102,6 +115,10 @@ function matchRow(r) {
       ${r.follow_ups.length ? `<p class="tiny" style="margin-top:8px;color:var(--gold-text)">To make this score exact, answer: ${r.follow_ups.map(f => esc(f.item)).join(", ")}</p>` : ""}
       <div class="row" style="margin-top:10px"><a class="btn" href="#/career/${r.career_id}">Skills &amp; details</a><a class="btn quiet" href="#/roadmap/${r.career_id}">Roadmap →</a>
         <button class="btn quiet" type="button" data-hide="${r.career_id}">Not for me</button></div>
+      <div class="rate"><span class="tiny faint">Would you consider it?</span>${[1, 2, 3, 4, 5].map(v =>
+        `<button type="button" data-rate="${r.career_id}" data-v="${v}" aria-pressed="${(state.ratings || {})[r.career_id] === v}"
+          title="${["Not at all", "Probably not", "Maybe", "Probably", "Definitely"][v - 1]}">${v}</button>`).join("")}
+        <span class="tiny faint">1 = not at all · 5 = definitely</span></div>
     </div>
     <div class="side">${scoreHtml(r)}
       <div class="parts">${parts.map(([n, lo, hi]) => `<span>${n}</span><div class="meter"><i style="width:${Math.round((lo ?? 0) * 100)}%"></i></div>

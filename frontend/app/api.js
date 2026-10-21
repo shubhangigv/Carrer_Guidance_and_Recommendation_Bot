@@ -52,6 +52,8 @@ const api = {
   hidden: () => api.call("GET", "/feedback/hidden"),
   hideCareer: (id) => api.call("PUT", `/feedback/hidden/${id}`),
   unhideCareer: (id) => api.call("DELETE", `/feedback/hidden/${id}`),
+  ratings: (assessmentId) => api.call("GET", `/feedback/ratings?assessment_id=${assessmentId}`),
+  rateCareer: (id, body) => api.call("PUT", `/feedback/rating/${id}`, body),
   saveAssessment: (answers) => api.call("POST", "/assessment", answers),
   recommend: (assessmentId, topN = 10) => api.call("GET", `/recommend?assessment_id=${assessmentId}&top_n=${topN}`),
   matchText: (text, topN = 6) => api.call("POST", "/match/text", { text, top_n: topN }),

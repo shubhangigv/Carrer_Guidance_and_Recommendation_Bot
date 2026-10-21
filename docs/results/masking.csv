@@ -1,0 +1,7 @@
+hidden_rows,method,n_students,mean_inflation,mean_abs_error,false_top5_entries,top5_overlap,pct_contains_full,top5_overlap_after_follow_ups
+1,naive,910,-0.06,0.68,0.704,0.83,3.2,
+1,range,910,-3.074,3.074,0.0,0.549,100.0,0.658
+2,naive,910,-0.437,1.011,0.965,0.763,1.7,
+2,range,910,-5.856,5.856,0.0,0.478,100.0,0.991
+3,naive,910,-0.954,1.437,1.002,0.719,1.6,
+3,range,910,-8.727,8.727,0.0,0.419,100.0,0.997

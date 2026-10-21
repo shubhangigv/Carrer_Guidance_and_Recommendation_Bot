@@ -1,0 +1,7 @@
+component,change,weights_after_renormalising,n_students,mean_top5_overlap,min_top5_overlap,pct_identical_top5
+interest,+10%,"interest 0.379, skill 0.414, subject 0.207",910,0.958,0.6,79.7
+interest,-10%,"interest 0.333, skill 0.444, subject 0.222",910,0.955,0.6,78.4
+skill,+10%,"interest 0.342, skill 0.452, subject 0.205",910,0.973,0.6,86.6
+skill,-10%,"interest 0.373, skill 0.403, subject 0.224",910,0.969,0.6,84.6
+subject,+10%,"interest 0.350, skill 0.420, subject 0.231",910,0.969,0.6,84.7
+subject,-10%,"interest 0.365, skill 0.438, subject 0.197",910,0.965,0.6,82.6

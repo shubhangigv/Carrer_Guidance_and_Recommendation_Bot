@@ -186,3 +186,21 @@ CREATE TABLE IF NOT EXISTS career_feedback (
     CONSTRAINT fk_career_feedback_student FOREIGN KEY (student_id) REFERENCES student (student_id) ON DELETE CASCADE,
     CONSTRAINT fk_career_feedback_career  FOREIGN KEY (career_id)  REFERENCES career (career_id)   ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Students rate their own matches 1-5, for the user test (migration 005).
+CREATE TABLE IF NOT EXISTS career_rating (
+    student_id    INT UNSIGNED NOT NULL,
+    assessment_id INT UNSIGNED NOT NULL,
+    career_id     INT UNSIGNED NOT NULL,
+    rating        TINYINT UNSIGNED NOT NULL,
+    shown_rank    TINYINT UNSIGNED NOT NULL,
+    shown_group   ENUM('your_areas', 'also_consider', 'all') NOT NULL,
+    model_version VARCHAR(20) NOT NULL,
+    rated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (student_id, assessment_id, career_id),
+    KEY ix_career_rating_career (career_id),
+    CONSTRAINT ck_career_rating_range CHECK (rating BETWEEN 1 AND 5),
+    CONSTRAINT fk_career_rating_student    FOREIGN KEY (student_id)    REFERENCES student (student_id)       ON DELETE CASCADE,
+    CONSTRAINT fk_career_rating_assessment FOREIGN KEY (assessment_id) REFERENCES assessment (assessment_id) ON DELETE CASCADE,
+    CONSTRAINT fk_career_rating_career     FOREIGN KEY (career_id)     REFERENCES career (career_id)         ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

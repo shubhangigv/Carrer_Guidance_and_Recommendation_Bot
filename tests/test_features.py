@@ -193,7 +193,7 @@ from ml.pathways import career_ladder, courses_for, load_courses, load_education
 
 
 def test_routes_file_is_well_formed():
-    routes = load_routes()
+    routes = load_routes(include_unverified=True)
     assert len(routes) >= 20
     for r in routes:
         assert r["name"] and r["prefixes"] and r["steps"]
@@ -203,6 +203,20 @@ def test_routes_file_is_well_formed():
     assert [r["id"] for r in routes_for("29-1215.00", routes)] == ["doctor"]
     assert [r["id"] for r in routes_for("17-2051.00", routes)] == ["engineer"]
     assert routes_for("99-9999.00", routes) == []
+
+
+def test_route_is_verified_only_if_every_step_is(tmp_path, monkeypatch):
+    f = tmp_path / "paths.csv"
+    f.write_text("route_id,route_name,applies_to,verified,stage,text,link_name,link_url\n"
+                 "a,Route A,29,yes,Step 1,Do this,,\na,Route A,29,no,Step 2,Then this,,\n"
+                 "b,Route B,17,yes,Step 1,Do that,,\n", encoding="utf-8")
+    routes = {r["id"]: r for r in load_routes(f, include_unverified=True)}
+    assert routes["a"]["verified"] is False and routes["b"]["verified"] is True
+    assert [r["id"] for r in load_routes(f, include_unverified=False)] == ["b"]
+    monkeypatch.setenv("SHOW_UNVERIFIED_ROUTES", "no")              # the .env switch for the demo
+    assert [r["id"] for r in load_routes(f)] == ["b"]
+    monkeypatch.setenv("SHOW_UNVERIFIED_ROUTES", "yes")
+    assert len(load_routes(f)) == 2
 
 
 def test_suggested_stream_for_lab_scientist(data):
