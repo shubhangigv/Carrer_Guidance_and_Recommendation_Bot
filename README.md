@@ -1,139 +1,112 @@
 # Pathfinder: AI-Based Multi-Domain Career Guidance and Recommendation System
 
-Final-year project. Recommends careers from every field to a student, explains each recommendation
-from the student's own answers, finds skill gaps, and builds a learning roadmap.
+Final-year project. A student takes a short quiz; Pathfinder recommends careers from **every field**
+(about 900 careers from O*NET, not IT only), explains each match from the student's own answers,
+shows the skills to build and a step-by-step roadmap, and answers questions in a career chatbot.
 
-## Status
+## How it works (one paragraph per part)
 
-| Part | Status |
-|---|---|
-| Literature survey (11 papers), research gap, architecture, ER diagram, UI mockups | Done |
-| O*NET 31.0 data explored (`notebooks/01_explore_onet.ipynb`) | Done |
-| Baseline recommender with explanations and skill gaps (`ml/baseline_recommender.py`) | Done |
-| Working browser prototype (`frontend/prototype/pathfinder.html`) | Done |
-| Tests for the engine (`tests/`) | Done |
-| Student survey script (`tools/create_career_survey.gs`, 9 questions, "No experience" / "Can't assess" options) | Ready, not sent yet |
-| MySQL database: 13-table schema, O*NET loader, engine reads from MySQL, files-vs-MySQL tests (`database/`, `backend/db.py`) | Done (verify on your PC with the real O*NET data) |
-| `answer_status` for answers without a number (`database/migrations/002_answer_status.sql`) | Done |
-| Engine v2: readiness, score ranges for unknown answers, field diversity (`ml/recommender_v2.py`) | Done (verify on real O*NET) |
-| No-survey experiments (`experiments/`, `docs/results/`) | Scripts done; run them on real O*NET (see `docs/results/README.md`) |
-| FastAPI backend: auth, assessment, recommendations, search, target career (`backend/main.py`) | Done |
-| Student web app: quiz, matches, career details + skills to build, roadmap, explore by industry, assistant (`frontend/app/`) | Done |
-| Short job titles, India filter, Sentence-BERT/TF-IDF text matching, Gemini assistant | Done (Gemini needs a key) |
-| React version of the app | Not planned (plain JS app covers all pages) |
-| ML comparison, Sentence-BERT, hybrid ranking | After survey data |
-| ESCO, NCO-2015, jobs, resume analyser, RAG chatbot | Later |
+1. **Quiz** (`frontend/app/quiz.js`): areas the student wants to work in (optional), course, 6 interests,
+   8 skills (+ 3 strongest / 2 weakest), 8 subjects, kind of workday, further study, city, "about you".
+2. **Engine v3** (`ml/recommender_v3.py`): for every career, *interest fit* (RIASEC, Pearson), *readiness*
+   (do your skill/subject levels meet O*NET's required levels?) and *strength fit* (are your strongest rows the
+   ones this career relies on most?). Unanswered questions give a score range, never a higher score.
+3. **Field model** (`ml/field_model.py`): Logistic Regression trained on the student survey predicts the field a
+   student with these answers and this course usually aims for. Used when the student picks no areas.
+4. **Personalisation** (`ml/preferences.py`): areas the student picked come first (7 places), then 3 "also worth a
+   look"; lifestyle filters (desk/active from O*NET Work Context, no further study from Job Zones); careers that
+   need the student's weak points go last and say why; "Not for me" hides a career.
+5. **Text matching** (`ml/semantic.py`): Sentence-BERT matches "about you" to career descriptions by meaning.
+6. **Career pages, roadmap, chatbot** (`ml/career_needs.py`, `ml/pathways.py`, `backend/assistant.py`):
+   every important skill (have / build), Indian education routes, a roadmap with progress, and a Gemini chatbot
+   that answers only from our career records.
 
-## Setup (Windows PowerShell)
+Results and limitations: `docs/report/results_tables.md` (generated from `docs/results/`).
+
+## Setup on a new PC (Windows PowerShell, from the project folder)
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
+pip install torch --index-url https://download.pytorch.org/whl/cpu    # small CPU-only PyTorch
+pip install -r requirements-ml.txt                                     # Sentence-BERT
+Copy-Item .env.example .env                                            # then edit .env (below)
 ```
 
-Download the O*NET 31.0 text database from
-https://www.onetcenter.org/dl_files/database/db_31_0_text.zip and extract it into `data/raw/onet/`.
-
-### MySQL (Phase 1)
-
-1. Install MySQL Server and MySQL Workbench. In Workbench, run:
-   `CREATE DATABASE career_guidance CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
-2. `Copy-Item .env.example .env`, then put your MySQL password in `.env` (never commit `.env`).
-3. `python scripts\load_onet_to_mysql.py` creates the 13 tables from `database/schema.sql`, fills them
-   from O*NET and prints the row counts. It is safe to run again (no duplicates).
-4. Database created before October 2026? Run the migration once (safe to repeat):
-   `python -c "from backend.db import get_engine, run_sql_file; run_sql_file(get_engine(), 'database/migrations/002_answer_status.sql')"`
-5. `pytest -q -rs` checks that MySQL and the `.txt` files give identical recommendations.
-
-### API (FastAPI)
-
-1. `pip install -r requirements-dev.txt` (adds FastAPI, uvicorn, bcrypt, PyJWT, httpx).
-2. In `.env` set `JWT_SECRET` to a long random string:
-   `python -c "import secrets; print(secrets.token_urlsafe(48))"` (see `.env.example`).
-3. Start the server: `uvicorn backend.main:app --reload`
-4. Open http://127.0.0.1:8000/docs. Try `POST /auth/register`, then `POST /auth/login`, copy `access_token`,
-   click **Authorize** (top right) and paste it. Then `POST /assessment` → `GET /recommend`.
-5. `GET /health` shows where the data comes from: `"data_source": "mysql"` (O*NET loaded into MySQL) or
-   `"files"` (MySQL not running or empty; then accounts and answers are kept in memory and lost on restart).
-
-### Student web app
-
-With the server running, open **http://127.0.0.1:8000/app/** (or just http://127.0.0.1:8000/).
-
-| Page | What it does |
-|---|---|
-| Quiz `#/quiz` | 24 questions, one at a time (6 interests, 8 skills, 8 subjects, where you want to work, optional "about you") |
-| My matches `#/matches` | top 10 careers from different fields with reasons; plus careers matching your own words (Sentence-BERT or TF-IDF) |
-| Career `#/career/<id>` | description, **how to get there** (Indian route with exams and degree, stream after Class 10, US education shares, ways in / where you can grow), every important O*NET skill/knowledge (to build / have / check yourself), preparation, salary (only from a cited source), job links for your city, similar careers |
-| Roadmap `#/roadmap/<id>` | qualification → skills in priority order → experience → applying; tick steps, progress is saved |
-| Explore `#/explore` | 27 industries (Medicine, Engineering, Beauty & Wellness, Agriculture, Film/Bollywood, …) and search |
-| Ask `#/assistant` | career assistant chat (Gemini, answers only from our career records) |
-
-The page has no engine of its own: `frontend/app/api.js` holds every API call; one small file per page
-(`quiz.js`, `matches.js`, `career.js`, `roadmap.js`, `explore.js`, `assistant.js`), `core.js` the shared parts.
-
-### Settings you can change without code (`config/`)
-
-* `india_exclusions.csv` – careers never recommended in India (now: gambling jobs), each with a reason.
-* `industries.csv` – the Explore categories (which O*NET codes belong to each).
-* `salary_india.csv` – salaries, **only with a source**; empty until the team adds verified numbers.
-* `career_paths.csv` – Indian education routes (e.g. Class 12 PCB → NEET-UG → MBBS) for 28 career groups, with
-  official links. **Drafted by AI and marked `verified = no`**: the app shows "Not yet checked" until the team
-  checks each route on its official website and sets `verified` to `yes`.
-* `courses.csv` – specific courses per skill; only rows with a `verified_on` date are shown (empty for now;
-  until then each skill shows search links to Coursera, YouTube, SWAYAM and NPTEL).
-
-### Optional extras
-
-* **Chatbot:** get a free key at https://aistudio.google.com and put `GEMINI_API_KEY=...` in `.env`.
-  Without it the assistant runs in offline mode (lists matching careers).
-* **Sentence-BERT:** `pip install -r requirements-ml.txt` (large download). Without it "matches for your
-  own words" uses TF-IDF. The page always says which method was used.
-
-| Endpoint | Login? | What it does |
-|---|---|---|
-| `POST /auth/register`, `POST /auth/login` | no | create an account (bcrypt-hashed password), get a token |
-| `POST /assessment` | yes | save the survey answers (rating 1-5, `no_experience`, `not_studied`, `cant_assess`) |
-| `GET /recommend?assessment_id=&top_n=` | yes | engine v2 top careers (score / range / withheld, follow-ups, reasons); saved with `model_version = v2` |
-| `GET /careers/search?q=` | no | search by title and O*NET alternate titles |
-| `GET /careers/{career_id}` | no | description, field, Job Zone |
-| `GET /target/{career_id}/questions?assessment_id=` | yes | survey rows still needed for that career |
-| `POST /target/{career_id}` | yes | readiness range, gaps, interest check, nearby alternatives |
-| `GET /health` | no | data source, storage, number of careers |
+1. **O*NET data:** download https://www.onetcenter.org/dl_files/database/db_31_0_text.zip and extract it into
+   `data\raw\onet\` (not in Git).
+2. **`.env`:** set `JWT_SECRET` to a long random string
+   (`python -c "import secrets; print(secrets.token_urlsafe(48))"`) and your MySQL password. Optional:
+   `GEMINI_API_KEY` (free at https://aistudio.google.com) for the chatbot. All settings are explained in `.env.example`.
+3. **MySQL** (recommended; without it accounts are kept in memory and lost on restart): install MySQL Server +
+   Workbench, run `CREATE DATABASE career_guidance CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`, then
+   `python scripts\load_onet_to_mysql.py`. New tables and columns (`database/migrations/`) are added
+   automatically when the server starts.
+4. **Survey file (team PC only):** save the Google Form responses as `data\raw\survey\responses.csv`
+   (git-ignored, never commit it). Without it the app works, but the field model is off.
 
 ## Run
 
-| What | How |
+```powershell
+.venv\Scripts\uvicorn backend.main:app --reload
+```
+
+* Student app: **http://127.0.0.1:8000/app/**
+* API documentation (try every endpoint): http://127.0.0.1:8000/docs
+* Health check: http://127.0.0.1:8000/health (`"data_source": "mysql"` or `"files"`)
+
+The first minute after starting, "matches for your own words" may say the matcher is still starting
+(Sentence-BERT is loading). Close large programs if the PC is low on memory.
+
+| Page | What it does |
 |---|---|
-| List O*NET files | `python scripts\inventory_onet.py` |
-| Explore the data | open `notebooks/01_explore_onet.ipynb` |
-| Get recommendations (v1) | open `notebooks/02_baseline_demo.ipynb` and Run All |
-| Engine v2 demo (v1 vs v2, ranges) | open `notebooks/03_engine_v2_demo.ipynb` and Run All |
-| No-survey experiments | see `docs/results/README.md` (`python experiments\self_match.py` etc.) |
-| Prototype | open `frontend/prototype/pathfinder.html` in a browser; load `docs/careers.json` (made by notebook 02's last cell) in the Data tab for real data |
-| Load O*NET into MySQL | `python scripts\load_onet_to_mysql.py` |
-| API + student app | `uvicorn backend.main:app --reload`, then open http://127.0.0.1:8000/app/ (app) or /docs (Swagger) |
-| Tests | `pip install -r requirements-dev.txt` then `pytest -q -rs` (MySQL tests are skipped if MySQL is not running) |
-| Survey results | save the form's CSV as `data\raw\survey\responses.csv`, then see `docs/results/survey/README.md` |
-| Create the survey | paste `tools/create_career_survey.gs` into script.google.com and run it |
+| Quiz `#/quiz` | one question at a time; review screen before submitting |
+| My matches `#/matches` | 10 careers grouped "your areas" / "also worth a look", reasons, "What you'd do", "Not for me", 1–5 rating, matches for your own words |
+| Career `#/career/<id>` | description, how to get there in India, skills to build / you have, salary (cited only), job links, similar careers |
+| Roadmap `#/roadmap/<id>` | qualification → skills by priority → experience → applying; ticks are saved |
+| Explore `#/explore` | 27 industries and search by job title |
+| Ask `#/assistant` | career chatbot (Gemini; offline list of careers without a key) |
 
-## How the baseline works
+## Tests and experiments
 
-Each career is compared with the student on interests (6 RIASEC types), skills and subjects.
-Each part is the Pearson correlation between the two profiles, rescaled to 0–1.
-
+```powershell
+pytest -q -rs                                   # all tests (MySQL tests skip if MySQL is not running)
+python experiments\survey_analysis.py           # survey charts and counts
+python experiments\survey_insights.py           # answer quality, branch vs aim, which answers separate fields
+python experiments\hit_rate.py                  # Hit Rate@1/3/5 of the aimed field vs random
+python experiments\tune_weights.py              # cross-validated weight tuning
+python experiments\ml_compare.py                # ML models vs the engine
+python experiments\model_features.py            # which answers the field model should use
+python experiments\hybrid.py                    # ML field + engine, cross-validated
+python experiments\user_test.py --since 2026-10-22 --exclude-emails team@x.com   # after the user test
+python experiments\report_tables.py             # rebuild docs/report/results_tables.md
 ```
-Profile Match Score = (0.30 × skills + 0.25 × interests + 0.15 × subjects) / 0.70 × 100
-Skill gap           = required level (O*NET LV, 0–7) − student level (self-rating mapped to 0–7)
-Gap priority        = importance × gap
-```
 
-The score measures profile similarity, not a probability of success. Weights are starting values.
+The O*NET-only checks (synthetic students) are in `docs/results/README.md`. The user test procedure is in
+`docs/user_test_protocol.md`.
 
-## Data
+## Settings you can change without code (`config/`)
+
+| File | What it holds |
+|---|---|
+| `areas.csv` | the 17 areas a student can pick, as O*NET-SOC code prefixes |
+| `course_areas.csv` | each course → its areas and the matching survey branch option |
+| `career_paths.csv` | Indian education routes with official links. **AI drafts, `verified = no`** until the team checks each row on the official site; set `SHOW_UNVERIFIED_ROUTES=no` in `.env` to show only checked routes |
+| `india_exclusions.csv` | careers never recommended in India, each with a reason |
+| `industries.csv` | the Explore categories |
+| `salary_india.csv`, `courses.csv` | salaries and courses, **only with a source / checked date** (empty until the team adds them) |
+| `survey_field_map.csv` | survey field → O*NET codes; fixed before any result, do not tune |
+
+## Rules the project follows
+
+* No invented numbers: every result comes from a script in `experiments/`, and the report tables are generated.
+* Raw survey responses never leave the team PC; the field model is trained in memory and never saved.
+* Gender, religion, caste and other sensitive attributes are never used.
+
+## Data and licence
 
 O*NET 31.0 Database, National Center for O*NET Development, CC BY 4.0
 (https://www.onetcenter.org/db_releases.html). Raw files are not stored in this repository.
 
-See `CLAUDE.md` for full project context, design decisions and the roadmap.
+See `CLAUDE.md` for the full design, decisions and status.
