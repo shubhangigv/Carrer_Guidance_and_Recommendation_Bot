@@ -1,0 +1,23 @@
+row,eta_squared
+skill:Programming,0.485
+subject:Computer Science,0.367
+subject:Biology,0.249
+subject:Mathematics,0.213
+skill:Mathematics,0.163
+subject:Physics/Chemistry,0.153
+subject:Commerce/Economics,0.149
+subject:Languages,0.129
+skill:Technical/Practical Skills,0.125
+skill:Communication,0.123
+skill:Problem Solving,0.108
+skill:Leadership,0.097
+Social,0.09
+subject:Social Sciences,0.085
+Realistic,0.076
+skill:Research,0.069
+subject:Arts/Design,0.064
+skill:Writing,0.062
+Investigative,0.035
+Enterprising,0.029
+Conventional,0.02
+Artistic,0.017
