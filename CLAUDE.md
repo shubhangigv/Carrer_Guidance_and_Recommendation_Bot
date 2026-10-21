@@ -38,6 +38,9 @@ give Windows PowerShell commands, and say how to run and verify it.
 | Short titles + India filter (`ml/localise.py`, `config/`), industries, full requirements + roadmap (`ml/career_needs.py`) | DONE (16 Oct) |
 | Text matching (`ml/semantic.py`: Sentence-BERT if installed, else TF-IDF), Gemini assistant (`backend/assistant.py`) | DONE (needs GEMINI_API_KEY; SBERT optional) |
 | "How to get there": Indian routes (`config/career_paths.csv`), stream, ladder, courses (`ml/pathways.py`, GET /careers/{id}/pathway) | DONE (16 Oct); 28 routes are AI DRAFTS (verified=no) - team must check each on the official site |
+| Engine v3 (`ml/recommender_v3.py`: v2 + "strength fit" = Pearson of the student's row ratings vs the career's row importance); API uses it (`ENGINE_VERSION` in .env, default v3) | DONE (21 Oct). Hand weights (pre-registered, hit_rate.py "v3"): Hit@1/@5 15.9%/36.2% vs v2 5.8%/30.4%, random 8.8%/35.5%. App weights interest 0.3/skill 0.4/subject 0.3, fit share 0.75 chosen by `experiments/tune_weights.py` (5-fold CV x5; report its CV Hit@1/@5 16.2%/37.1%, not in-sample). Fit share capped at 0.75 so cant_assess ranges stay. Caveat: the fit uses known answers only, so A5's guarantee holds for readiness, not the fit |
+| Text matcher: minimum similarity (`MIN_SIMILARITY` in `ml/semantic.py`), Job Zone >= 3 pool | DONE (20 Oct); Sentence-BERT installed on the team PC (TF-IDF cannot separate good from noise) |
+| Quiz v2 + personalisation (`ml/preferences.py`, `config/areas.csv`, `config/course_areas.csv`): pick up to 3 areas, course, 3 strongest / 2 weakest skills (feed the strength fit only), work setting (O*NET Work Context) and further study (Job Zone <= 4) filters, results grouped "your areas" (7) + "also worth a look" (3), "Not for me" (`career_feedback` table, migration 004), idea chips for the text box | DONE (21 Oct). Product feature, NOT part of the Hit@k evaluation (asking the area would make it circular). Nothing tuned on the survey |
 | React version, `engine.js` v2 for the offline prototype | NOT planned |
 | Survey sent (50+ responses on 16 Oct) | IN PROGRESS (target 100) |
 | Survey scripts: `ml/survey.py`, `experiments/survey_analysis.py`, `hit_rate.py`, `ml_compare.py` (docs/results/survey/README.md) | Scripts DONE + tested on synthetic CSV; NOT run on the real responses yet (raw file stays on the team's PC) |
@@ -71,6 +74,9 @@ notebooks/01_explore_onet.ipynb  data exploration
 notebooks/02_baseline_demo.ipynb demo on two test profiles + careers.json export
 notebooks/03_engine_v2_demo.ipynb v1 vs v2 on the hand-made test profiles, ranges and follow-ups
 ml/recommender_v2.py            engine v2 (readiness, ranges for unknown answers, diversity, target career)
+ml/recommender_v3.py            engine v3 = v2 + strength fit (tests: tests/test_recommender_v3.py); used by the API
+ml/preferences.py               areas / course / lifestyle filters / "not for me" / grouped results on top of v3 (tests/test_preferences.py)
+config/areas.csv, course_areas.csv  the areas a student can pick (SOC prefixes, checked on real O*NET) and course -> areas
 experiments/                    Phase B no-survey experiments (self_match, weight_sensitivity, masking, summarise)
 docs/results/                   experiment CSVs, README (what each tests + limitations), summary.md
 scripts/inventory_onet.py        lists every O*NET file with rows and columns
@@ -205,7 +211,7 @@ Demo: `notebooks/03_engine_v2_demo.ipynb` (hand-made test profiles, not real stu
 O*NET 31.0 (download blocked in the dev session), so there are no numbers yet. Run them locally
 (`docs/results/README.md`), then replace this line with the main numbers from `docs/results/summary.md`.
 
-## Database (MySQL, 13 tables, from the ER diagram; built in `database/schema.sql`)
+## Database (MySQL, 13 tables from the ER diagram + roadmap_progress (003) + career_feedback (004); `database/schema.sql`)
 
 - `load_from_mysql(engine)` in the engine returns the same dict as `load_onet()`; both go through `_pivot()`.
 - `career` holds every occupation in `Occupation Data.txt`; only careers with interest + skill + knowledge data are ranked.
@@ -215,7 +221,7 @@ O*NET 31.0 (download blocked in the dev session), so there are no numbers yet. R
 | Table | Columns |
 |---|---|
 | student | student_id PK, name, email, password_hash, education_level, degree, year_of_study |
-| assessment | assessment_id PK, student_id FK, completed_at |
+| assessment | assessment_id PK, student_id FK, completed_at, preferred_location, about_me, profile_json (004) |
 | assessment_rating | assessment_id FK, category, item, rating (1–5, NULL if not rated), answer_status (rated / no_experience / not_studied / cant_assess) |
 | recommendation | rec_id PK, student_id FK, career_id FK, assessment_id FK, match_score, reasons, model_version, created_at |
 | career | career_id PK, onet_code, title, description, domain, job_zone, source |

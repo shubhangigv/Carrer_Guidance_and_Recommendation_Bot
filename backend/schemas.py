@@ -8,6 +8,7 @@ from typing import Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 
+from ml.preferences import FURTHER_STUDY, MAX_AREAS, MAX_STRENGTHS, MAX_WEAKNESSES, WORK_SETTINGS
 from ml.recommender_v2 import SKILL_MAP_V2, SUBJECT_MAP_V2
 
 SkillRow = Literal[tuple(SKILL_MAP_V2)]          # only the 8 survey rows are accepted
@@ -85,6 +86,17 @@ class Interests(BaseModel):
     Conventional: int = Field(ge=1, le=5)
 
 
+class Profile(BaseModel):
+    """The extra quiz answers (all optional). Area and course keys come from config/areas.csv and
+    config/course_areas.csv (GET /quiz/options lists them); they are checked in ml/preferences.clean_profile."""
+    areas: list[str] = Field(default_factory=list, max_length=MAX_AREAS, description="up to 3 area keys, e.g. tech")
+    course: Optional[str] = Field(default=None, max_length=50, description="course key, e.g. btech_cse")
+    strengths: list[SkillRow] = Field(default_factory=list, max_length=MAX_STRENGTHS)
+    weaknesses: list[SkillRow] = Field(default_factory=list, max_length=MAX_WEAKNESSES)
+    work_setting: Literal[tuple(WORK_SETTINGS)] = "any"
+    further_study: Literal[tuple(FURTHER_STUDY)] = "any"
+
+
 class AssessmentIn(BaseModel):
     interests: Interests
     skills: dict[SkillRow, SkillAnswer] = Field(default_factory=dict,
@@ -95,6 +107,7 @@ class AssessmentIn(BaseModel):
                                               description="Where the student wants to work, e.g. Pune (job-search links)")
     about_me: Optional[str] = Field(default=None, max_length=1000,
                                     description="Optional free text: what the student enjoys (semantic matching)")
+    profile: Optional[Profile] = Field(default=None, description="areas, course, strongest/weakest skills, lifestyle")
 
     model_config = {"json_schema_extra": {"example": {
         "interests": {"Realistic": 2, "Investigative": 5, "Artistic": 3, "Social": 3,
@@ -128,6 +141,7 @@ class RecommendationOut(BaseModel):
     code: str
     career: str = Field(description="official O*NET title")
     display_title: str = Field(description="short common title shown to students")
+    summary: str = Field(default="", description="first sentence of the O*NET description (what the job involves)")
     field: str
     display: Literal["score", "range", "withheld"]
     interest_fit: float
@@ -141,12 +155,39 @@ class RecommendationOut(BaseModel):
     critical_unknowns: list[str]
     follow_ups: list[FollowUp]
     reasons: list[str]
+    group: Literal["your_areas", "also_consider", "all"] = Field(
+        description="your_areas = in the areas the student picked (or linked to their course); also_consider = elsewhere")
+    areas: list[str] = Field(default_factory=list, description="labels of the student's areas this career is in")
+    course_link: bool = False
 
 
 class RecommendResponse(BaseModel):
     assessment_id: int
     model_version: str
+    chosen_areas: list[str] = Field(default_factory=list)
+    areas_from: Optional[Literal["picked", "course"]] = None
+    notes: list[str] = Field(default_factory=list, description="filters used, hidden careers ...")
     recommendations: list[RecommendationOut]
+
+
+class Option(BaseModel):
+    key: str
+    label: str
+    example: str = ""
+
+
+class QuizOptions(BaseModel):
+    areas: list[Option]
+    courses: list[Option]
+    work_settings: list[Option]
+    further_study: list[Option]
+    max_areas: int
+    max_strengths: int
+    max_weaknesses: int
+
+
+class HiddenOut(BaseModel):
+    career_ids: list[int]
 
 
 # ---------------------------------------------------------------- careers

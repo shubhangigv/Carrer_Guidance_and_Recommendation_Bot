@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS assessment (
     completed_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     preferred_location VARCHAR(100) NULL,          -- e.g. Pune, used for job-search links (migration 003)
     about_me      TEXT NULL,                       -- optional free text, used by the semantic matcher
+    profile_json  TEXT NULL,                       -- areas, course, strengths ... as JSON (migration 004)
     PRIMARY KEY (assessment_id),
     KEY ix_assessment_student (student_id),
     CONSTRAINT fk_assessment_student FOREIGN KEY (student_id) REFERENCES student (student_id) ON DELETE CASCADE
@@ -172,4 +173,16 @@ CREATE TABLE IF NOT EXISTS roadmap_progress (
     KEY ix_roadmap_progress_career (career_id),
     CONSTRAINT fk_roadmap_progress_student FOREIGN KEY (student_id) REFERENCES student (student_id) ON DELETE CASCADE,
     CONSTRAINT fk_roadmap_progress_career  FOREIGN KEY (career_id)  REFERENCES career (career_id)   ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- "Not for me": careers a student hid from their matches (migration 004).
+CREATE TABLE IF NOT EXISTS career_feedback (
+    student_id INT UNSIGNED NOT NULL,
+    career_id  INT UNSIGNED NOT NULL,
+    verdict    ENUM('not_for_me') NOT NULL DEFAULT 'not_for_me',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (student_id, career_id),
+    KEY ix_career_feedback_career (career_id),
+    CONSTRAINT fk_career_feedback_student FOREIGN KEY (student_id) REFERENCES student (student_id) ON DELETE CASCADE,
+    CONSTRAINT fk_career_feedback_career  FOREIGN KEY (career_id)  REFERENCES career (career_id)   ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -31,6 +31,7 @@ class MemoryRepository:
     def __init__(self):
         self.students, self.assessments, self.recommendations = {}, {}, []
         self.progress = {}                      # (student_id, career_id) -> set of finished step keys
+        self.hidden = {}                        # student_id -> set of career_ids marked "not for me"
         self._lock = threading.Lock()
 
     def create_student(self, name, email, password_hash, education_level=None, degree=None, year_of_study=None):
@@ -50,12 +51,13 @@ class MemoryRepository:
         s = self.students.get(student_id)
         return None if s is None else dict(s)
 
-    def create_assessment(self, student_id, answers, preferred_location=None, about_me=None):
+    def create_assessment(self, student_id, answers, preferred_location=None, about_me=None, profile=None):
         with self._lock:
             assessment_id = len(self.assessments) + 1
             self.assessments[assessment_id] = {"assessment_id": assessment_id, "student_id": student_id,
                                                "completed_at": datetime.now(timezone.utc),
                                                "preferred_location": preferred_location, "about_me": about_me,
+                                               "profile_json": json.dumps(profile) if profile else None,
                                                "answers": [dict(a) for a in answers]}
             return assessment_id
 
@@ -85,6 +87,14 @@ class MemoryRepository:
                 self.recommendations.append({"student_id": student_id, "assessment_id": assessment_id,
                                              "career_id": career_ids[r["code"]], "match_score": r["match_score"],
                                              "reasons": json.dumps(r["reasons"]), "model_version": r["model_version"]})
+
+    def set_hidden(self, student_id, career_id, hidden):
+        with self._lock:
+            ids = self.hidden.setdefault(student_id, set())
+            ids.add(career_id) if hidden else ids.discard(career_id)
+
+    def hidden_careers(self, student_id):
+        return set(self.hidden.get(student_id, set()))
 
     def career_ids(self, data):
         return career_ids_from_data(data)
@@ -118,11 +128,13 @@ class SqlRepository:
             row = conn.execute(text("SELECT * FROM student WHERE student_id = :id"), {"id": student_id}).mappings().first()
         return None if row is None else dict(row)
 
-    def create_assessment(self, student_id, answers, preferred_location=None, about_me=None):
+    def create_assessment(self, student_id, answers, preferred_location=None, about_me=None, profile=None):
         with self.engine.begin() as conn:      # one transaction: the assessment and all its answers, or nothing
             assessment_id = int(conn.execute(text("""
-                INSERT INTO assessment (student_id, preferred_location, about_me) VALUES (:sid, :loc, :about)"""),
-                {"sid": student_id, "loc": preferred_location, "about": about_me}).lastrowid)
+                INSERT INTO assessment (student_id, preferred_location, about_me, profile_json)
+                VALUES (:sid, :loc, :about, :profile)"""),
+                {"sid": student_id, "loc": preferred_location, "about": about_me,
+                 "profile": json.dumps(profile) if profile else None}).lastrowid)
             conn.execute(text("""
                 INSERT INTO assessment_rating (assessment_id, category, item, rating, answer_status)
                 VALUES (:assessment_id, :category, :item, :rating, :answer_status)"""),
@@ -176,3 +188,14 @@ class SqlRepository:
     def career_ids(self, data):
         with self.engine.connect() as conn:
             return dict(conn.execute(text("SELECT onet_code, career_id FROM career")).all())
+
+    def set_hidden(self, student_id, career_id, hidden):
+        sql = ("INSERT IGNORE INTO career_feedback (student_id, career_id) VALUES (:sid, :cid)" if hidden else
+               "DELETE FROM career_feedback WHERE student_id = :sid AND career_id = :cid")
+        with self.engine.begin() as conn:
+            conn.execute(text(sql), {"sid": student_id, "cid": career_id})
+
+    def hidden_careers(self, student_id):
+        with self.engine.connect() as conn:
+            return set(conn.execute(text("SELECT career_id FROM career_feedback WHERE student_id = :sid"),
+                                    {"sid": student_id}).scalars())
