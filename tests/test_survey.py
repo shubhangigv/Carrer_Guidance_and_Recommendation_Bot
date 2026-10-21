@@ -148,6 +148,24 @@ def test_tune_weights_runs_with_cross_validation(survey_csv, onet_dir, tmp_path)
     assert saved["students"] == 30                                 # "Not sure yet" left out
 
 
+def test_hybrid_runs_with_cross_validation(survey_csv, onet_dir, tmp_path):
+    import hybrid
+    summary = hybrid.main(["--survey", str(survey_csv), "--onet-dir", str(onet_dir), "--out", str(tmp_path / "out"),
+                           "--repeats", "1"])
+    assert set(summary["method"]) == {"hybrid", "v3", "random"}
+    assert (summary.loc[summary["method"] != "random", "students"] == 30).all()
+    assert summary["hit_rate"].between(0, 1).all()
+
+
+def test_survey_insights_runs(survey_csv, tmp_path):
+    import survey_insights
+    by_field, eta = survey_insights.main(["--survey", str(survey_csv), "--out", str(tmp_path / "out"), "--no-charts",
+                                          "--per-student", str(tmp_path / "missing.csv")])
+    assert (by_field["students"] >= survey_insights.MIN_GROUP).all() or survey_insights.SMALL in by_field.index
+    assert eta.between(0, 1).all()
+    assert "Answer quality" in (tmp_path / "out" / "insights.md").read_text(encoding="utf-8")
+
+
 def test_survey_analysis_runs(survey_csv, tmp_path):
     import survey_analysis
     survey_analysis.main(["--survey", str(survey_csv), "--out", str(tmp_path / "out"), "--no-charts",
