@@ -349,3 +349,16 @@ def test_student_can_rate_own_matches(client, ctx):
     assert client.put(f"/feedback/rating/{lab_id}", json={**body, "rating": 6}, headers=headers).status_code == 422
     other = login(client, email="other@example.com")                 # someone else's assessment: 404
     assert client.put(f"/feedback/rating/{lab_id}", json=body, headers=other).status_code == 404
+
+
+def test_recommend_uses_the_field_model_when_no_areas(client, ctx):
+    class FakeModel:
+        def predict(self, student, branch=None):
+            return {"field": "Arts, Design & Media", "probability": 0.9, "prefixes": ["27"], "used_branch": False}
+    ctx.field_model = FakeModel()
+    headers = login(client)
+    aid = client.post("/assessment", json=FULL_ANSWERS, headers=headers).json()["assessment_id"]
+    res = client.get("/recommend", params={"assessment_id": aid}, headers=headers).json()
+    assert res["areas_from"] == "predicted" and res["chosen_areas"] == ["Arts, Design & Media"]
+    first = res["recommendations"][0]
+    assert first["code"] == "27-0001.00" and first["areas"] == ["Arts, Design & Media"] and first["group"] == "your_areas"

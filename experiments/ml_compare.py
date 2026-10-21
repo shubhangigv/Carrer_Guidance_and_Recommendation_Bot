@@ -34,6 +34,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from ml.field_model import logreg_pipeline  # noqa: E402
 from ml.localise import apply_local_rules  # noqa: E402
 from ml.recommender_v2 import load_onet_v2, recommend_v2  # noqa: E402
 from ml.recommender_v3 import HAND_FIT_SHARE, HAND_WEIGHTS, recommend_v3  # noqa: E402
@@ -58,7 +59,7 @@ def models():
     def pipe(model):
         return make_pipeline(SimpleImputer(strategy="median", add_indicator=True), StandardScaler(), model)
     out = {"majority": pipe(DummyClassifier(strategy="most_frequent")),
-           "logreg": pipe(LogisticRegression(class_weight="balanced", max_iter=2000, C=1.0)),
+           "logreg": logreg_pipeline(),          # the same pipeline the app's field model uses
            "forest": pipe(RandomForestClassifier(n_estimators=300, class_weight="balanced", random_state=SEED)),
            "svm": pipe(SVC(kernel="rbf", class_weight="balanced", C=1.0, random_state=SEED))}
     try:

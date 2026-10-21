@@ -28,7 +28,7 @@ PAGES.matches = async () => {
   const rest = state.recs.filter(r => r.group !== "your_areas");
   const areaText = info.chosenAreas.join(", ");
   const heading = mine.length
-    ? `<h2 class="group-title">In your areas <span class="soft">· ${esc(areaText)}${info.areasFrom === "course" ? " (from your course)" : ""}</span></h2>`
+    ? `<h2 class="group-title">${info.areasFrom === "predicted" ? "Suggested field" : "In your areas"} <span class="soft">· ${esc(areaText)}${info.areasFrom === "course" ? " (from your course)" : info.areasFrom === "predicted" ? " (suggested from your answers - pick areas in the quiz to choose yourself)" : ""}</span></h2>`
     : "";
   shared = sharedReasons(state.recs);
   const restTitle = mine.length ? `<h2 class="group-title">Also worth a look <span class="soft">· outside your areas, but they fit your answers</span></h2>` : "";

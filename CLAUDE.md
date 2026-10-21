@@ -45,7 +45,9 @@ give Windows PowerShell commands, and say how to run and verify it.
 | `SHOW_UNVERIFIED_ROUTES` (.env): "no" hides education routes not checked on official sites; a route is verified only if every row is | DONE; all 73 rows still verified=no |
 | `ml_compare.py` with engine_v3 (hand weights): acc 15.9%, macro-F1 0.273 (v2 6.3% / 0.080; logreg 63.5% / 0.585 on 4 fields) | DONE (21 Oct) |
 | Survey study (`experiments/survey_insights.py` -> `insights.md`): interests barely differ by aimed field (eta^2 0.02-0.04), Programming 0.49, CS 0.37, Biology 0.25; 42/69 aim at their branch's field; 4% flat skill answers; 46% of answers are 4-5 | DONE (21 Oct) |
-| Hybrid (`experiments/hybrid.py`): logreg predicts the field (trained on 4/5, tested on 1/5, 5x5 CV), engine v3 hand weights fills the top 3 from it, rest normal. Hit@1/3/5 57.1%/57.1%/64.9% vs v3 15.9%/29.0%/36.2%, random 8.8%/23.6%/35.5%. N_FROM_FIELD=3 fixed before the run | Experiment DONE (21 Oct); NOT in the app yet |
+| Hybrid (`experiments/hybrid.py`): logreg predicts the field (trained on 4/5, tested on 1/5, 5x5 CV), engine v3 hand weights fills the top 3 from it, rest normal. Held-out Hit@1/3/5: answers only 57.1%/57.1%/64.9%; answers + branch 67.2%/67.2%/73.9%; v3 alone 15.9%/29.0%/36.2%; random 8.8%/23.6%/35.5%. N_FROM_FIELD=3 fixed before the run | DONE (21 Oct) |
+| Feature sets (`experiments/model_features.py`, same folds): answers22 63.5% acc / 0.585 F1; +branch 74.0% / 0.680; skills+subjects 58.1% / 0.542; branch only 66.7% / 0.526. Rule fixed in advance: switch only if better on both | DONE |
+| Field model in the app (`ml/field_model.py`): trained in memory at server start from responses.csv on that PC (never saved or committed; `USE_FIELD_MODEL` in .env). Used when the student picks no areas; with a course it uses answers + branch (`survey_branch` column in config/course_areas.csv). Without the file: course -> areas rule | DONE (21 Oct) |
 | React version, `engine.js` v2 for the offline prototype | NOT planned |
 | Survey sent (50+ responses on 16 Oct) | IN PROGRESS (target 100) |
 | Survey scripts: `ml/survey.py`, `experiments/survey_analysis.py`, `hit_rate.py`, `ml_compare.py` (docs/results/survey/README.md) | Scripts DONE + tested on synthetic CSV; NOT run on the real responses yet (raw file stays on the team's PC) |
@@ -80,6 +82,7 @@ notebooks/02_baseline_demo.ipynb demo on two test profiles + careers.json export
 notebooks/03_engine_v2_demo.ipynb v1 vs v2 on the hand-made test profiles, ranges and follow-ups
 ml/recommender_v2.py            engine v2 (readiness, ranges for unknown answers, diversity, target career)
 ml/recommender_v3.py            engine v3 = v2 + strength fit (tests: tests/test_recommender_v3.py); used by the API
+ml/field_model.py               field model (logreg on survey, trained at startup, in memory only)
 ml/preferences.py               areas / course / lifestyle filters / "not for me" / grouped results on top of v3 (tests/test_preferences.py)
 config/areas.csv, course_areas.csv  the areas a student can pick (SOC prefixes, checked on real O*NET) and course -> areas
 experiments/                    Phase B no-survey experiments (self_match, weight_sensitivity, masking, summarise)
