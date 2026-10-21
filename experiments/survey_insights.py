@@ -126,6 +126,7 @@ def main(argv=None):
 
     args.out.mkdir(parents=True, exist_ok=True)
     by_field.to_csv(args.out / "insights_by_field.csv")
+    eta.round(3).rename_axis("row").rename("eta_squared").to_csv(args.out / "insights_eta.csv")
     if not args.no_charts:
         heatmap(by_field.drop(columns="students"), args.out / "insights_heatmap.png")
     top_eta = eta.head(8).round(3).reset_index().set_axis(["row", "eta_squared"], axis=1)

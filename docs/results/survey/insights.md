@@ -69,7 +69,7 @@ Rows that differ LEAST:
 |---|---|---|---|
 | v2 | varied skill ratings | 67 | 0.313 |
 | v2 | all skills rated the same | 2 | 0.0 |
-| v3 | varied skill ratings | 67 | 0.373 |
+| v3 | varied skill ratings | 67 | 0.328 |
 | v3 | all skills rated the same | 2 | 0.0 |
 
 Limits: one college, small groups, self-ratings; eta squared describes this sample and is not a test.

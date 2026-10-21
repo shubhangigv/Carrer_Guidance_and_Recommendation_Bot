@@ -24,7 +24,7 @@ give Windows PowerShell commands, and say how to run and verify it.
 - Do not use gender, religion, caste or other sensitive attributes as recommendation inputs.
 - Keep the architecture below unless the team agrees to change it.
 
-## Status (updated 14 Oct 2026)
+## Status (updated 21 Oct 2026)
 
 | Part | Status |
 |---|---|
@@ -37,7 +37,7 @@ give Windows PowerShell commands, and say how to run and verify it.
 | Student web app on the API (`frontend/app/`, served by FastAPI at `/app/`) | DONE (redesigned 16 Oct: quiz, matches, career, roadmap, explore, assistant) |
 | Short titles + India filter (`ml/localise.py`, `config/`), industries, full requirements + roadmap (`ml/career_needs.py`) | DONE (16 Oct) |
 | Text matching (`ml/semantic.py`: Sentence-BERT if installed, else TF-IDF), Gemini assistant (`backend/assistant.py`) | DONE (needs GEMINI_API_KEY; SBERT optional) |
-| "How to get there": Indian routes (`config/career_paths.csv`), stream, ladder, courses (`ml/pathways.py`, GET /careers/{id}/pathway) | DONE (16 Oct); 28 routes are AI DRAFTS (verified=no) - team must check each on the official site |
+| "How to get there": Indian routes (`config/career_paths.csv`), stream, ladder, courses (`ml/pathways.py`, GET /careers/{id}/pathway) | DONE (16 Oct); all 73 route rows are AI DRAFTS (verified=no) - team must check each on the official site |
 | Engine v3 (`ml/recommender_v3.py`: v2 + "strength fit" = Pearson of the student's row ratings vs the career's row importance); API uses it (`ENGINE_VERSION` in .env, default v3) | DONE (21 Oct). Numbers after the 21 Oct `career_row_needs` fix (IM no longer requires LV; ~1,000 importance values were ignored before): hand weights (pre-registered, used by the app) Hit@1/@5 14.5%/31.9% vs v2 5.8%/30.4%, random 8.8%/35.5%. `tune_weights.py` CV Hit@1/@5 13.1%/29.9% - tuning no longer beats the hand weights, so the app uses the hand weights (0.25/0.30/0.15, fit share 0.5). Caveat: the fit uses known answers only, so A5's guarantee holds for readiness, not the fit |
 | Text matcher: minimum similarity (`MIN_SIMILARITY` in `ml/semantic.py`), Job Zone >= 3 pool | DONE (20 Oct); Sentence-BERT installed on the team PC (TF-IDF cannot separate good from noise) |
 | Quiz v2 + personalisation (`ml/preferences.py`, `config/areas.csv`, `config/course_areas.csv`): pick up to 3 areas, course, 3 strongest / 2 weakest skills (feed the strength fit only), work setting (O*NET Work Context) and further study (Job Zone <= 4) filters, results grouped "your areas" (7) + "also worth a look" (3), "Not for me" (`career_feedback` table, migration 004), idea chips for the text box | DONE (21 Oct). Product feature, NOT part of the Hit@k evaluation (asking the area would make it circular). Nothing tuned on the survey |
@@ -49,8 +49,8 @@ give Windows PowerShell commands, and say how to run and verify it.
 | Feature sets (`experiments/model_features.py`, same folds): answers22 63.5% acc / 0.585 F1; +branch 74.0% / 0.680; skills+subjects 58.1% / 0.542; branch only 66.7% / 0.526. Rule fixed in advance: switch only if better on both | DONE |
 | Field model in the app (`ml/field_model.py`): trained in memory at server start from responses.csv on that PC (never saved or committed; `USE_FIELD_MODEL` in .env). Used when the student picks no areas; with a course it uses answers + branch (`survey_branch` column in config/course_areas.csv). Without the file: course -> areas rule | DONE (21 Oct) |
 | React version, `engine.js` v2 for the offline prototype | NOT planned |
-| Survey sent (50+ responses on 16 Oct) | IN PROGRESS (target 100) |
-| Survey scripts: `ml/survey.py`, `experiments/survey_analysis.py`, `hit_rate.py`, `ml_compare.py` (docs/results/survey/README.md) | Scripts DONE + tested on synthetic CSV; NOT run on the real responses yet (raw file stays on the team's PC) |
+| Survey sent | IN PROGRESS: 75 responses analysed on 21 Oct (target 100; re-run all survey scripts when it closes) |
+| Survey scripts: `ml/survey.py`, `experiments/survey_analysis.py`, `hit_rate.py`, `ml_compare.py` (docs/results/survey/README.md) | DONE, run on the 75 real responses 21 Oct (raw file stays on the team's PC; only totals are committed) |
 
 ## Plan to the deadline (whole project finished by 31 Oct 2026)
 
@@ -85,7 +85,8 @@ ml/recommender_v3.py            engine v3 = v2 + strength fit (tests: tests/test
 ml/field_model.py               field model (logreg on survey, trained at startup, in memory only)
 ml/preferences.py               areas / course / lifestyle filters / "not for me" / grouped results on top of v3 (tests/test_preferences.py)
 config/areas.csv, course_areas.csv  the areas a student can pick (SOC prefixes, checked on real O*NET) and course -> areas
-experiments/                    Phase B no-survey experiments (self_match, weight_sensitivity, masking, summarise)
+experiments/                    Phase B no-survey experiments (self_match, weight_sensitivity, masking, summarise); survey experiments
+                                 (survey_analysis, survey_insights, hit_rate, tune_weights, ml_compare, model_features, hybrid, user_test)
 docs/results/                   experiment CSVs, README (what each tests + limitations), summary.md
 scripts/inventory_onet.py        lists every O*NET file with rows and columns
 frontend/prototype/pathfinder.html  working browser prototype (engine ported to JavaScript)
@@ -108,7 +109,7 @@ tools/create_career_survey.gs    Google Apps Script that builds the 9-question s
 tests/test_baseline_recommender.py  pytest tests with a tiny fake O*NET folder (tests/fake_onet.py)
 tests/test_mysql_matches_files.py   files vs MySQL give identical results (skipped if MySQL is not running)
 tests/test_recommender_v2.py     engine v2 spec tests;  tests/test_experiments.py  experiment scripts on fake data
-database/schema.sql              the 13 MySQL tables (CREATE TABLE IF NOT EXISTS)
+database/schema.sql              all MySQL tables: the 13 from the ER diagram + 3 added by migrations (CREATE TABLE IF NOT EXISTS)
 database/migrations/            ALTER scripts for an existing database (002_answer_status.sql); applied automatically
                                  by update_schema() (loader + API startup), so each must be safe to run again
 backend/db.py                    get_engine() from .env, run_sql_file(), update_schema() (schema.sql + all migrations)
@@ -217,7 +218,7 @@ Demo: `notebooks/03_engine_v2_demo.ipynb` (hand-made test profiles, not real stu
 
 **Phase B results (run on real O*NET 31.0, 21 Oct; synthetic students, NOT accuracy; `docs/results/summary.md`):** B1 self-match own career in top 5: V0 79.2%, V1 67.0%, V2 64.9%, V3 94.7% after the fix (V3 partly favoured: its fit resembles how the synthetic student is built). B2 (v2 weights +/-10%): mean top-5 overlap 0.955-0.973. B3 masking 1/2/3 rows: range method 0 false top-5 entries (naive 0.70/0.97/1.00); top-5 overlap after follow-ups 0.66/0.99/1.00 (1 hidden row often shows no follow-ups because unknown share <= 20%).
 
-## Database (MySQL, 13 tables from the ER diagram + roadmap_progress (003) + career_feedback (004); `database/schema.sql`)
+## Database (MySQL, 13 tables from the ER diagram + roadmap_progress (003) + career_feedback (004) + career_rating (005); `database/schema.sql`)
 
 - `load_from_mysql(engine)` in the engine returns the same dict as `load_onet()`; both go through `_pivot()`.
 - `career` holds every occupation in `Occupation Data.txt`; only careers with interest + skill + knowledge data are ranked.
