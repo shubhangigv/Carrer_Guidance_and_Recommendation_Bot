@@ -14,6 +14,7 @@ Four parts, each honest about where it comes from:
   5. Courses (config/courses.csv): only courses the team has opened and checked; nothing invented.
 """
 import csv
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -25,8 +26,18 @@ ROUTES_FILE = PROJECT_ROOT / "config" / "career_paths.csv"
 COURSES_FILE = PROJECT_ROOT / "config" / "courses.csv"
 
 # ---------------------------------------------------------------- 1. routes
-def load_routes(path=ROUTES_FILE):
-    """[{id, name, prefixes, verified, steps: [{stage, text, link_name, link_url}]}], file order kept."""
+def show_unverified_routes():
+    """SHOW_UNVERIFIED_ROUTES in .env: "yes" (default, while the team is still checking; each such route is
+    labelled "not yet checked") or "no" (for the demo/report: only routes checked on the official sites)."""
+    return os.getenv("SHOW_UNVERIFIED_ROUTES", "yes").strip().lower() not in ("no", "n", "false", "0")
+
+
+def load_routes(path=ROUTES_FILE, include_unverified=None):
+    """[{id, name, prefixes, verified, steps: [{stage, text, link_name, link_url}]}], file order kept.
+    A route counts as verified only if EVERY one of its rows has verified = yes.
+    include_unverified: None = follow SHOW_UNVERIFIED_ROUTES; False = leave unverified routes out."""
+    if include_unverified is None:
+        include_unverified = show_unverified_routes()
     path = Path(path)
     if not path.exists():
         return []
@@ -39,11 +50,12 @@ def load_routes(path=ROUTES_FILE):
             route = routes.setdefault(rid, {
                 "id": rid, "name": r["route_name"].strip(),
                 "prefixes": [p.strip() for p in r["applies_to"].split(";") if p.strip()],
-                "verified": (r.get("verified") or "").strip().lower() in ("yes", "y", "true"), "steps": []})
+                "verified": True, "steps": []})
+            route["verified"] &= (r.get("verified") or "").strip().lower() in ("yes", "y", "true")
             route["steps"].append({"stage": r["stage"].strip(), "text": r["text"].strip(),
                                    "link_name": (r.get("link_name") or "").strip() or None,
                                    "link_url": (r.get("link_url") or "").strip() or None})
-    return list(routes.values())
+    return [r for r in routes.values() if include_unverified or r["verified"]]
 
 
 def routes_for(code, routes):

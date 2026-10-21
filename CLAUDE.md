@@ -32,7 +32,7 @@ give Windows PowerShell commands, and say how to run and verify it.
 | MySQL schema (`database/schema.sql`), `backend/db.py`, loader, files-vs-MySQL tests | DONE |
 | `assessment_rating.answer_status` (migration `database/migrations/002_answer_status.sql`) | DONE |
 | Engine v2 (`ml/recommender_v2.py`, spec in "Design decisions v2"), tests, notebook 03 | DONE (verify on real O*NET) |
-| No-survey experiments (`experiments/`, results in `docs/results/`) | Scripts DONE, NOT run on real O*NET yet |
+| No-survey experiments (`experiments/`, results in `docs/results/`) | DONE, run on real O*NET 21 Oct (V3 added to self-match) |
 | FastAPI backend (`backend/main.py`, tests in `tests/test_api.py`) | DONE (test by hand in /docs) |
 | Student web app on the API (`frontend/app/`, served by FastAPI at `/app/`) | DONE (redesigned 16 Oct: quiz, matches, career, roadmap, explore, assistant) |
 | Short titles + India filter (`ml/localise.py`, `config/`), industries, full requirements + roadmap (`ml/career_needs.py`) | DONE (16 Oct) |
@@ -41,6 +41,9 @@ give Windows PowerShell commands, and say how to run and verify it.
 | Engine v3 (`ml/recommender_v3.py`: v2 + "strength fit" = Pearson of the student's row ratings vs the career's row importance); API uses it (`ENGINE_VERSION` in .env, default v3) | DONE (21 Oct). Hand weights (pre-registered, hit_rate.py "v3"): Hit@1/@5 15.9%/36.2% vs v2 5.8%/30.4%, random 8.8%/35.5%. App weights interest 0.3/skill 0.4/subject 0.3, fit share 0.75 chosen by `experiments/tune_weights.py` (5-fold CV x5; report its CV Hit@1/@5 16.2%/37.1%, not in-sample). Fit share capped at 0.75 so cant_assess ranges stay. Caveat: the fit uses known answers only, so A5's guarantee holds for readiness, not the fit |
 | Text matcher: minimum similarity (`MIN_SIMILARITY` in `ml/semantic.py`), Job Zone >= 3 pool | DONE (20 Oct); Sentence-BERT installed on the team PC (TF-IDF cannot separate good from noise) |
 | Quiz v2 + personalisation (`ml/preferences.py`, `config/areas.csv`, `config/course_areas.csv`): pick up to 3 areas, course, 3 strongest / 2 weakest skills (feed the strength fit only), work setting (O*NET Work Context) and further study (Job Zone <= 4) filters, results grouped "your areas" (7) + "also worth a look" (3), "Not for me" (`career_feedback` table, migration 004), idea chips for the text box | DONE (21 Oct). Product feature, NOT part of the Hit@k evaluation (asking the area would make it circular). Nothing tuned on the survey |
+| User test: 1-5 "would you consider it?" on each match (`career_rating`, migration 005), `experiments/user_test.py`, `docs/user_test_protocol.md` | Code DONE (21 Oct); test with 5-10 students NOT run yet |
+| `SHOW_UNVERIFIED_ROUTES` (.env): "no" hides education routes not checked on official sites; a route is verified only if every row is | DONE; all 73 rows still verified=no |
+| `ml_compare.py` with engine_v3 (hand weights): acc 15.9%, macro-F1 0.273 (v2 6.3% / 0.080; logreg 63.5% / 0.585 on 4 fields) | DONE (21 Oct) |
 | React version, `engine.js` v2 for the offline prototype | NOT planned |
 | Survey sent (50+ responses on 16 Oct) | IN PROGRESS (target 100) |
 | Survey scripts: `ml/survey.py`, `experiments/survey_analysis.py`, `hit_rate.py`, `ml_compare.py` (docs/results/survey/README.md) | Scripts DONE + tested on synthetic CSV; NOT run on the real responses yet (raw file stays on the team's PC) |
@@ -207,9 +210,7 @@ denominator (manual calculation); diversity max 2 per field in the top 5; suppre
 thresholds; matching profile ranks first; flat interests -> 0.5; all v1 tests still pass.
 Demo: `notebooks/03_engine_v2_demo.ipynb` (hand-made test profiles, not real students).
 
-**Phase B results (one line):** experiment scripts written and tested on fake data only; NOT yet run on real
-O*NET 31.0 (download blocked in the dev session), so there are no numbers yet. Run them locally
-(`docs/results/README.md`), then replace this line with the main numbers from `docs/results/summary.md`.
+**Phase B results (run on real O*NET 31.0, 21 Oct; synthetic students, NOT accuracy; `docs/results/summary.md`):** B1 self-match own career in top 5: V0 79.2%, V1 67.0%, V2 64.9%, V3 99.2% (V3 partly favoured: its fit resembles how the synthetic student is built). B2 (v2 weights +/-10%): mean top-5 overlap 0.955-0.973. B3 masking 1/2/3 rows: range method 0 false top-5 entries (naive 0.70/0.97/1.00); top-5 overlap after follow-ups 0.66/0.99/1.00 (1 hidden row often shows no follow-ups because unknown share <= 20%).
 
 ## Database (MySQL, 13 tables from the ER diagram + roadmap_progress (003) + career_feedback (004); `database/schema.sql`)
 

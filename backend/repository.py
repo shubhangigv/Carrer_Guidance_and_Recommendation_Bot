@@ -32,6 +32,7 @@ class MemoryRepository:
         self.students, self.assessments, self.recommendations = {}, {}, []
         self.progress = {}                      # (student_id, career_id) -> set of finished step keys
         self.hidden = {}                        # student_id -> set of career_ids marked "not for me"
+        self.ratings = {}                       # (student_id, assessment_id, career_id) -> rating row
         self._lock = threading.Lock()
 
     def create_student(self, name, email, password_hash, education_level=None, degree=None, year_of_study=None):
@@ -95,6 +96,15 @@ class MemoryRepository:
 
     def hidden_careers(self, student_id):
         return set(self.hidden.get(student_id, set()))
+
+    def rate_career(self, student_id, assessment_id, career_id, rating, shown_rank, shown_group, model_version):
+        with self._lock:
+            self.ratings[(student_id, assessment_id, career_id)] = {
+                "student_id": student_id, "assessment_id": assessment_id, "career_id": career_id, "rating": rating,
+                "shown_rank": shown_rank, "shown_group": shown_group, "model_version": model_version}
+
+    def ratings_for(self, student_id, assessment_id):
+        return {k[2]: v["rating"] for k, v in self.ratings.items() if k[:2] == (student_id, assessment_id)}
 
     def career_ids(self, data):
         return career_ids_from_data(data)
@@ -199,3 +209,19 @@ class SqlRepository:
         with self.engine.connect() as conn:
             return set(conn.execute(text("SELECT career_id FROM career_feedback WHERE student_id = :sid"),
                                     {"sid": student_id}).scalars())
+
+    def rate_career(self, student_id, assessment_id, career_id, rating, shown_rank, shown_group, model_version):
+        with self.engine.begin() as conn:
+            conn.execute(text("""
+                INSERT INTO career_rating (student_id, assessment_id, career_id, rating, shown_rank, shown_group, model_version)
+                VALUES (:sid, :aid, :cid, :rating, :rank, :grp, :ver)
+                ON DUPLICATE KEY UPDATE rating = VALUES(rating), shown_rank = VALUES(shown_rank),
+                    shown_group = VALUES(shown_group), model_version = VALUES(model_version), rated_at = CURRENT_TIMESTAMP"""),
+                {"sid": student_id, "aid": assessment_id, "cid": career_id, "rating": rating, "rank": shown_rank,
+                 "grp": shown_group, "ver": model_version})
+
+    def ratings_for(self, student_id, assessment_id):
+        with self.engine.connect() as conn:
+            return dict(conn.execute(text("""
+                SELECT career_id, rating FROM career_rating WHERE student_id = :sid AND assessment_id = :aid"""),
+                {"sid": student_id, "aid": assessment_id}).all())

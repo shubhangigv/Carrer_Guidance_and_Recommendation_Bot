@@ -130,7 +130,7 @@ def test_ml_compare_runs_without_leakage(survey_csv, onet_dir, tmp_path):
     import ml_compare
     ml_compare.main(["--survey", str(survey_csv), "--onet-dir", str(onet_dir), "--out", str(tmp_path / "out")])
     table = pd.read_csv(tmp_path / "out" / "ml_compare.csv")
-    assert {"majority", "logreg", "forest", "svm", "engine_v2"} <= set(table["model"])
+    assert {"majority", "logreg", "forest", "svm", "engine_v2", "engine_v3"} <= set(table["model"])
     assert table[["accuracy_mean", "macro_f1_mean"]].stack().between(0, 1).all()
     majority = table.set_index("model").loc["majority", "accuracy_mean"]
     assert math.isclose(majority, 10 / 30, abs_tol=0.01)          # 3 equal classes -> 1/3

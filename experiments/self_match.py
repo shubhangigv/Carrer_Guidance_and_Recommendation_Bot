@@ -5,6 +5,7 @@ For every rankable career we build a SYNTHETIC "perfect student" from its own O*
   V0 = v1's Pearson correlation (on the v2 survey rows)
   V1 = importance-weighted Pearson (weights w = (IM - 1) / 4)
   V2 = engine v2 readiness (recommender_v2.score_all_v2)
+  V3 = engine v3 = readiness + strength fit, with the app's weights (recommender_v3.score_all_v3)
 No Job Zone filter and no diversity re-ranking, so every career can find itself.
 
 This is a consistency check of the scoring formulas, NOT accuracy: real students are not copies of a career.
@@ -20,14 +21,15 @@ import pandas as pd
 from common import (DEFAULT_ONET_DIR, DEFAULT_OUT_DIR, correlation_scores, field, load, order,
                     perfect_student, progress, ties_at_top)
 from ml.recommender_v2 import score_all_v2
+from ml.recommender_v3 import score_all_v3
 
-METHODS = ["V0", "V1", "V2"]
+METHODS = ["V0", "V1", "V2", "V3"]
 
 
 def scores_for(method, student, data, codes):
     """(score, tie-break) per career for one method."""
-    if method == "V2":
-        table, _ = score_all_v2(student, data, codes)
+    if method in ("V2", "V3"):
+        table, _ = (score_all_v2 if method == "V2" else score_all_v3)(student, data, codes)
         return table["match_low"], table["interest_fit"]
     return correlation_scores(student, data, codes, weighted=(method == "V1"))
 

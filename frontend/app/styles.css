@@ -188,3 +188,7 @@ footer.foot { max-width: 1080px; margin: 0 auto; padding: 24px 16px 40px; border
 .group-title { font-size: 20px; margin: 22px 0 8px; }
 .group-title .soft { font-size: 15px; font-weight: 400; }
 .card.notes { margin-top: 14px; }
+/* matches: "Would you consider it?" 1-5 rating */
+.rate { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.rate button { width: 32px; height: 32px; border-radius: 4px; border: 1px solid var(--line-strong); background: var(--card); cursor: pointer; }
+.rate button[aria-pressed="true"] { background: var(--green); border-color: var(--green); color: var(--green-ink); }

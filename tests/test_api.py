@@ -335,3 +335,17 @@ def test_each_match_says_what_the_job_is(client, ctx):
     lab = next(r for r in recs if r["code"] == LAB)
     description = str(ctx.data["occupations"].loc[LAB, "Description"])
     assert lab["summary"] and description.startswith(lab["summary"].rstrip(".…"))
+
+
+def test_student_can_rate_own_matches(client, ctx):
+    headers = login(client)
+    aid = client.post("/assessment", json=FULL_ANSWERS, headers=headers).json()["assessment_id"]
+    lab_id = ctx.career_ids[LAB]
+    body = {"assessment_id": aid, "rating": 4, "shown_rank": 1, "shown_group": "all"}
+    assert client.put(f"/feedback/rating/{lab_id}", json=body, headers=headers).json() == {"ratings": {str(lab_id): 4}}
+    client.put(f"/feedback/rating/{lab_id}", json={**body, "rating": 2}, headers=headers)   # rating again replaces it
+    assert client.get("/feedback/ratings", params={"assessment_id": aid}, headers=headers).json() == {"ratings": {str(lab_id): 2}}
+    assert ctx.repo.ratings[(1, aid, lab_id)]["shown_rank"] == 1
+    assert client.put(f"/feedback/rating/{lab_id}", json={**body, "rating": 6}, headers=headers).status_code == 422
+    other = login(client, email="other@example.com")                 # someone else's assessment: 404
+    assert client.put(f"/feedback/rating/{lab_id}", json=body, headers=other).status_code == 404

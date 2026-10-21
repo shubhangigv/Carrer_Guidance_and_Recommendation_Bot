@@ -7,10 +7,10 @@ behave sensibly. They are **not accuracy results**, and none of these numbers ma
 
 ## Status
 
-**Not run on the real O*NET 31.0 data yet.** The development session could not download O*NET
-(blocked network), so the scripts were only tested on the tiny fake data in `tests/`. Numbers from
-fake data mean nothing and are not reported anywhere. The numbers appear in `summary.md` after you run
-the commands below on your PC. That file is generated directly from the CSVs, so nothing is copied by hand.
+**Run on the real O*NET 31.0 data on 21 Oct 2026** (910 rankable careers). The numbers are in `summary.md`,
+generated directly from the CSVs, so nothing is copied by hand. B1 also includes **V3** (engine v3 with the app's
+weights). Note: V3's strength fit compares rating *shapes* with importance, and the synthetic student is built
+from the same career's levels, so V3 is partly favoured in B1. B2 and B3 test engine v2's weights and ranges.
 
 ## How to run (Windows PowerShell, project root, `.venv` active, O*NET in `data/raw/onet/`)
 

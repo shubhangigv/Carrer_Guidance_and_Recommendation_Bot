@@ -13,6 +13,10 @@ Models (scikit-learn Pipelines: imputer -> scaler -> model, so nothing leaks fro
   xgboost      only if the xgboost package is installed
   engine_v2    NOT trained: the field of the engine's top-1 career (config/survey_field_map.csv);
                evaluated on the same students, so it is directly comparable
+  engine_v3    the same with engine v3 and its PRE-REGISTERED hand weights (not the app's weights: those
+               were chosen on these students; their fair number is in tuned_weights.json)
+Note: the engine can name any of 900 careers in ~10 fields, while the models only choose between the
+fields kept here, so this comparison favours the models.
 Evaluation: repeated stratified k-fold cross-validation (k = 5, or fewer if a field has fewer students),
 5 repeats with fixed seeds. Metrics: accuracy and macro-F1 (each field counts equally) as mean +- std.
 No hyper-parameter search: with ~50 students a search would mostly fit noise. Fixed, standard settings.
@@ -32,6 +36,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from ml.localise import apply_local_rules  # noqa: E402
 from ml.recommender_v2 import load_onet_v2, recommend_v2  # noqa: E402
+from ml.recommender_v3 import HAND_FIT_SHARE, HAND_WEIGHTS, recommend_v3  # noqa: E402
 from ml.survey import (DEFAULT_SURVEY, NOT_SURE, feature_table, field_of_code, is_complete,  # noqa: E402
                        load_field_map, load_survey, to_student)
 
@@ -65,14 +70,24 @@ def models():
     return out
 
 
+ENGINES = {
+    "engine_v2": lambda s, data: recommend_v2(s, data, top_n=1, min_job_zone=3, diversity=True),
+    "engine_v3": lambda s, data: recommend_v3(s, data, top_n=1, min_job_zone=3, diversity=True,
+                                              weights=HAND_WEIGHTS, fit_share=HAND_FIT_SHARE),
+}
+
+
 def engine_predictions(tidy, data, field_map):
-    """The survey field of engine v2's top-1 career for each student (None if outside every field)."""
-    preds = []
-    print(f"  running the engine for {len(tidy)} students ...", flush=True)
-    for _, r in tidy.iterrows():
-        top = recommend_v2(to_student(r), data, top_n=1, min_job_zone=3, diversity=True)
-        preds.append(field_of_code(top["code"].iloc[0], field_map) if len(top) else None)
-    return pd.Series(preds, index=tidy.index)
+    """{engine name: the survey field of its top-1 career per student (None if outside every field)}."""
+    out = {}
+    for name, rank in ENGINES.items():
+        print(f"  running {name} for {len(tidy)} students ...", flush=True)
+        preds = []
+        for _, r in tidy.iterrows():
+            top = rank(to_student(r), data)
+            preds.append(field_of_code(top["code"].iloc[0], field_map) if len(top) else None)
+        out[name] = pd.Series(preds, index=tidy.index)
+    return out
 
 
 def run(X, y, engine_pred=None, repeats=REPEATS):
@@ -99,13 +114,13 @@ def run(X, y, engine_pred=None, repeats=REPEATS):
         rows.append({"model": name, "trained": True, "folds": k, "repeats": repeats,
                      "accuracy_mean": np.mean(accs), "accuracy_std": np.std(accs),
                      "macro_f1_mean": np.mean(f1s), "macro_f1_std": np.std(f1s)})
-    if engine_pred is not None:
-        pred = engine_pred.fillna("(outside the survey fields)").to_numpy()
-        rows.append({"model": "engine_v2", "trained": False, "folds": None, "repeats": None,
+    for name, engine in (engine_pred or {}).items():
+        pred = engine.fillna("(outside the survey fields)").to_numpy()
+        rows.append({"model": name, "trained": False, "folds": None, "repeats": None,
                      "accuracy_mean": accuracy_score(y, pred), "accuracy_std": 0.0,
                      "macro_f1_mean": f1_score(y, pred, labels=list(enc.classes_), average="macro", zero_division=0),
                      "macro_f1_std": 0.0})
-        best_preds["engine_v2"] = pred
+        best_preds[name] = pred
     return pd.DataFrame(rows).round(3), best_preds, list(enc.classes_), k
 
 
@@ -173,9 +188,9 @@ def main(argv=None):
     best = trained.sort_values("macro_f1_mean", ascending=False)["model"].iloc[0]
     confusion_png(y, preds[best], labels, f"{best}: cross-validated predictions ({len(y)} students)",
                   args.out / f"ml_confusion_{best}.png")
-    if engine_pred is not None:
-        confusion_png(y, preds["engine_v2"], labels + ["(outside the survey fields)"],
-                      f"engine v2 top-1 field ({len(y)} students)", args.out / "ml_confusion_engine_v2.png")
+    for name in engine_pred or {}:
+        confusion_png(y, preds[name], labels + ["(outside the survey fields)"],
+                      f"{name.replace('_', ' ')} top-1 field ({len(y)} students)", args.out / f"ml_confusion_{name}.png")
     feature_importance(X, y).to_csv(args.out / "ml_feature_importance.csv", index=False)
     (args.out / "ml_counts.txt").write_text(
         f"students_used={len(tidy)}\nfields={tidy['aimed_field'].nunique()}\nfolds={k}\nrepeats={REPEATS}\n"

@@ -238,6 +238,23 @@ def hide_career(career_id: int, student_id: int = Depends(current_student), ctx:
     return {"career_ids": sorted(ctx.repo.hidden_careers(student_id))}
 
 
+@app.put("/feedback/rating/{career_id}", response_model=schemas.RatingsOut, tags=["recommendations"])
+def rate_career(career_id: int, body: schemas.RatingIn, student_id: int = Depends(current_student),
+                ctx: AppContext = Depends(get_context)):
+    """The student's own rating of one match (user test). Rating again replaces the old rating."""
+    career_code(ctx, career_id)                       # 404 if the career does not exist
+    own_assessment(ctx, body.assessment_id, student_id)   # 404 if not this student's assessment
+    ctx.repo.rate_career(student_id, body.assessment_id, career_id, body.rating, body.shown_rank,
+                         body.shown_group, MODEL_VERSION)
+    return {"ratings": ctx.repo.ratings_for(student_id, body.assessment_id)}
+
+
+@app.get("/feedback/ratings", response_model=schemas.RatingsOut, tags=["recommendations"])
+def my_ratings(assessment_id: int, student_id: int = Depends(current_student), ctx: AppContext = Depends(get_context)):
+    own_assessment(ctx, assessment_id, student_id)
+    return {"ratings": ctx.repo.ratings_for(student_id, assessment_id)}
+
+
 @app.delete("/feedback/hidden/{career_id}", response_model=schemas.HiddenOut, tags=["recommendations"])
 def unhide_career(career_id: int, student_id: int = Depends(current_student), ctx: AppContext = Depends(get_context)):
     """Undo "not for me"."""

@@ -190,6 +190,17 @@ class HiddenOut(BaseModel):
     career_ids: list[int]
 
 
+class RatingIn(BaseModel):
+    assessment_id: int
+    rating: int = Field(ge=1, le=5, description="Would you consider this career? 1 = not at all, 5 = definitely")
+    shown_rank: int = Field(ge=1, le=50, description="the position the career had on the matches page")
+    shown_group: Literal["your_areas", "also_consider", "all"]
+
+
+class RatingsOut(BaseModel):
+    ratings: dict[int, int] = Field(description="career_id -> rating for this assessment")
+
+
 # ---------------------------------------------------------------- careers
 class CareerBrief(BaseModel):
     career_id: int

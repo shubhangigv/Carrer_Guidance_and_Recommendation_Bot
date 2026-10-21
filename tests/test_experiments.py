@@ -49,8 +49,8 @@ def test_weighted_pearson_with_equal_weights_is_plain_pearson(data):
 def test_self_match_runs(data):
     per_career, summary = self_match.run(data)
     assert len(per_career) == len(data["codes"])
-    assert list(summary["method"]) == ["V0", "V1", "V2"]
-    for m in ("V0", "V1", "V2"):
+    assert list(summary["method"]) == ["V0", "V1", "V2", "V3"]
+    for m in ("V0", "V1", "V2", "V3"):
         assert per_career[f"rank_{m}"].between(1, len(data["codes"])).all()
     assert summary["pct_own_in_top5"].between(0, 100).all()
 
