@@ -46,10 +46,13 @@ def personal_recommend(ctx, student, top_n=10, hidden_ids=()):
     if MODEL_VERSION == "v2":
         recs = recommend(student, ctx.data, top_n + len(hidden))
         recs = recs[~recs["code"].isin(hidden)].head(top_n).assign(rank=lambda d: range(1, len(d) + 1))
-        return recs.assign(group="all", area_keys=[[]] * len(recs), course_link=False,
+        return recs.assign(group="all", area_keys=[[]] * len(recs), area_labels=[[]] * len(recs), course_link=False,
                            extra_reasons=[[]] * len(recs)), {"notes": [], "chosen_areas": [], "areas_from": None}
-    return personalised(student, ctx.data, student.get("profile"), top_n=top_n, hidden=hidden,
-                        min_job_zone=MIN_JOB_ZONE, areas=ctx.areas, courses=ctx.study_courses)
+    recs, info = personalised(student, ctx.data, student.get("profile"), top_n=top_n, hidden=hidden,
+                              min_job_zone=MIN_JOB_ZONE, areas=ctx.areas, courses=ctx.study_courses,
+                              field_model=ctx.field_model)
+    info.pop("predicted", None)                   # the note already says it; not part of the API response
+    return recs, info
 
 
 @dataclass
@@ -64,6 +67,7 @@ class AppContext:
     courses: list = field(default_factory=load_courses)           # config/courses.csv (checked courses only)
     areas: object = field(default_factory=load_areas)             # config/areas.csv (areas a student can pick)
     study_courses: object = None                                  # config/course_areas.csv (degree -> areas)
+    field_model: object = None     # ml/field_model.py, trained on the survey at startup (None without the file)
     matcher: object = None     # ml/semantic.py matcher (LazyMatcher at startup; built on first use otherwise)
 
     def __post_init__(self):

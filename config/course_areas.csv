@@ -1,19 +1,19 @@
-key,label,areas
-btech_cse,"B.Tech / B.E. - Computer Science, IT or AI",tech;data
-btech_ece,"B.Tech / B.E. - Electronics, Electrical or EEE",engineering;tech
-btech_mech,B.Tech / B.E. - Mechanical or Automobile,engineering;trades
-btech_civil,B.Tech / B.E. - Civil,engineering;trades
-btech_chem,"B.Tech / B.E. - Chemical, Biotech or other",engineering;science
-bca,BCA / MCA,tech;data
-bsc_cs,B.Sc - Computer Science or Maths,tech;data;science
-bsc_science,"B.Sc - Physics, Chemistry, Biology or other science",science;health;nature
-mbbs,"MBBS, BDS, BAMS or BHMS",health
-nursing,"Nursing, Pharmacy or Physiotherapy",health
-bcom,B.Com,business;marketing
-bba,BBA / BMS,business;management;marketing
-ba,BA (Arts / Humanities),helping;teaching;arts;law
-law,Law (LLB / BA LLB),law
-design,"Design, Fine Arts or Architecture",arts;engineering
-agri,Agriculture or Veterinary,nature;science
-hotel,Hotel Management or Tourism,hospitality
-other,Other / I have not started college,
+key,label,areas,survey_branch
+btech_cse,"B.Tech / B.E. - Computer Science, IT or AI",tech;data,Engineering (B.E. / B.Tech)
+btech_ece,"B.Tech / B.E. - Electronics, Electrical or EEE",engineering;tech,Engineering (B.E. / B.Tech)
+btech_mech,B.Tech / B.E. - Mechanical or Automobile,engineering;trades,Engineering (B.E. / B.Tech)
+btech_civil,B.Tech / B.E. - Civil,engineering;trades,Engineering (B.E. / B.Tech)
+btech_chem,"B.Tech / B.E. - Chemical, Biotech or other",engineering;science,Engineering (B.E. / B.Tech)
+bca,BCA / MCA,tech;data,Computer Applications (BCA)
+bsc_cs,B.Sc - Computer Science or Maths,tech;data;science,Science (B.Sc)
+bsc_science,"B.Sc - Physics, Chemistry, Biology or other science",science;health;nature,Science (B.Sc)
+mbbs,"MBBS, BDS, BAMS or BHMS",health,Medical / Nursing / Pharmacy
+nursing,"Nursing, Pharmacy or Physiotherapy",health,Medical / Nursing / Pharmacy
+bcom,B.Com,business;marketing,Commerce (B.Com)
+bba,BBA / BMS,business;management;marketing,Management (BBA / BMS)
+ba,BA (Arts / Humanities),helping;teaching;arts;law,Arts / Humanities (BA)
+law,Law (LLB / BA LLB),law,Law
+design,"Design, Fine Arts or Architecture",arts;engineering,Design / Fine Arts
+agri,Agriculture or Veterinary,nature;science,Other
+hotel,Hotel Management or Tourism,hospitality,Other
+other,Other / I have not started college,,Other

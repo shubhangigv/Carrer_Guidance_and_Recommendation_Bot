@@ -38,6 +38,7 @@ from ml.localise import apply_local_rules
 from ml.pathways import load_education
 from ml.preferences import (FURTHER_STUDY, MAX_AREAS, MAX_STRENGTHS, MAX_WEAKNESSES, WORK_SETTINGS,
                             add_work_context, clean_profile)
+from ml.field_model import train_field_model
 from ml.semantic import LazyMatcher
 from ml.recommender_v2 import (add_extras, explain_v2, field_of, load_from_mysql, load_onet_v2,
                                questions_needed, target_career)
@@ -75,6 +76,7 @@ def build_context():
     for line in data.get("extras_info", []):
         log.info(line)
     ctx = AppContext(data, repo, repo.career_ids(data), source)
+    ctx.field_model = train_field_model()     # from the survey file on this PC only; None without it
     ctx.matcher = LazyMatcher(data)           # builds in the background; the server starts at once
     return ctx
 
@@ -190,7 +192,6 @@ def recommend(assessment_id: int, top_n: int = Query(10, ge=1, le=50),
     """Top careers: quiz scores (engine v3) + the student's areas, course, lifestyle and hidden careers."""
     student = own_assessment(ctx, assessment_id, student_id)
     recs, info = personal_recommend(ctx, student, top_n=top_n, hidden_ids=ctx.repo.hidden_careers(student_id))
-    labels = ctx.areas["label"]
     out, saved = [], []
     for _, r in recs.iterrows():
         reasons, _ = explain_v2(student, ctx.data, r["code"])
@@ -206,7 +207,7 @@ def recommend(assessment_id: int, top_n: int = Query(10, ge=1, le=50),
                for k in ("match_low", "match_high", "skill_low", "skill_high", "subject_low", "subject_high")},
             "coverage": num(r["coverage"]), "critical_unknowns": list(r["critical_unknowns"]),
             "follow_ups": [_follow_up(f) for f in r["follow_ups"]], "reasons": reasons,
-            "group": r["group"], "areas": [labels[k] for k in r["area_keys"]], "course_link": bool(r["course_link"])})
+            "group": r["group"], "areas": list(r["area_labels"]), "course_link": bool(r["course_link"])})
         saved.append({"code": r["code"], "match_score": float(r["match_low"]), "reasons": reasons,
                       "model_version": MODEL_VERSION})
     ctx.repo.save_recommendations(student_id, assessment_id, saved, ctx.career_ids)

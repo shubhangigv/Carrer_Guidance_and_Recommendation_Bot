@@ -19,6 +19,9 @@ they want - so results felt random. This file adds those answers on top, in plai
                area was picked, the areas linked to their course, config/course_areas.csv), spread across
                the picked areas; then "also worth a look": the best careers elsewhere (field diversity on),
                so a student still sees options outside their own idea.
+               No areas and no course: if a field model is available (ml/field_model.py, trained on the
+               survey), the field it predicts from the 22 answers fills the first PREDICTED_SLOTS places -
+               the cross-validated "hybrid" of experiments/hybrid.py.
   5. Reasons   "In an area you picked", "Linked to your course", "Uses your strength: Programming" (only when
                this career needs that skill more than 75% of careers do).
 
@@ -37,6 +40,7 @@ from ml.recommender_v3 import career_row_needs, result_frame, score_all_v3
 
 CONFIG = Path(__file__).resolve().parents[1] / "config"
 ALSO_CONSIDER = 3            # places kept for careers outside the student's areas (top 10 -> 7 + 3)
+PREDICTED_SLOTS = 3          # predicted field (ml/field_model.py): first 3 places, as evaluated in experiments/hybrid.py
 MIN_POOL = 30                # a filter that leaves fewer careers than this is skipped
 OUTDOOR_CX = 3.5             # desk filter: outdoor work about weekly or more
 SITTING_CX = 4.0             # active filter: sitting more than half the time
@@ -158,12 +162,13 @@ def _spread(codes, area_of, n, n_areas):
     return diversify(list(codes), area_of, top=n, max_per_field=math.ceil(n / n_areas))[:n]
 
 
-def personalised(student, data, profile=None, top_n=10, hidden=(), min_job_zone=3, areas=None, courses=None):
+def personalised(student, data, profile=None, top_n=10, hidden=(), min_job_zone=3, areas=None, courses=None,
+                 field_model=None):
     """Top careers for one student, using the extra answers in `profile` (see clean_profile).
 
     Returns (DataFrame, info). The DataFrame has recommend_v3's columns plus group ("your_areas",
     "also_consider" or "all"), area_keys, course_link and extra_reasons. info = {"notes": [...],
-    "chosen_areas": [...], "areas_from": "picked" | "course" | None}."""
+    "chosen_areas": [...], "areas_from": "picked" | "course" | "predicted" | None, "predicted": {...} or None}."""
     areas = load_areas() if areas is None else areas
     courses = load_courses(areas=areas) if courses is None else courses
     profile = clean_profile(profile, areas, courses)
@@ -181,13 +186,25 @@ def personalised(student, data, profile=None, top_n=10, hidden=(), min_job_zone=
     order = list(rank_order(table))
 
     course_areas = courses.at[profile["course"], "areas"] if profile["course"] else []
-    chosen, source = (profile["areas"], "picked") if profile["areas"] else (course_areas, "course") if course_areas \
-        else ([], None)
+    predicted = None
+    if not profile["areas"] and field_model is not None:
+        # the field model (answers + branch from the course) beat the fixed course -> areas rule:
+        # 74.0% vs 66.7% for the branch alone (experiments/model_features.py)
+        branch = (courses.at[profile["course"], "survey_branch"]
+                  if profile["course"] and "survey_branch" in courses.columns else None)
+        predicted = field_model.predict(student, branch or None)
+        extra = pd.DataFrame({"label": [predicted["field"]], "example": [""], "soc_prefixes": [";".join(predicted["prefixes"])],
+                              "prefixes": [predicted["prefixes"]]}, index=["_predicted"])
+        areas = pd.concat([areas, extra])
+        chosen, source = ["_predicted"], "predicted"
+    else:
+        chosen, source = ((profile["areas"], "picked") if profile["areas"] else
+                          (course_areas, "course") if course_areas else ([], None))
     in_area = {c: areas_of(c, areas, chosen) for c in order} if chosen else {}
     if chosen:
         mine = [c for c in order if in_area[c]]
         rest = [c for c in order if not in_area[c]]
-        n_mine = min(len(mine), max(top_n - ALSO_CONSIDER, 1))
+        n_mine = min(len(mine), PREDICTED_SLOTS if source == "predicted" else max(top_n - ALSO_CONSIDER, 1))
         top_mine = _spread(mine, {c: in_area[c][0] for c in mine}, n_mine, len(chosen))
         top = top_mine + diversify(rest, table["field"])[:top_n - len(top_mine)]
         groups = ["your_areas"] * len(top_mine) + ["also_consider"] * (len(top) - len(top_mine))
@@ -202,12 +219,15 @@ def personalised(student, data, profile=None, top_n=10, hidden=(), min_job_zone=
     course_label = courses.at[profile["course"], "label"] if profile["course"] else None
     out["group"] = groups
     out["area_keys"] = [areas_of(c, areas, chosen) if chosen else [] for c in top]
+    out["area_labels"] = [[labels[k] for k in keys] for keys in out["area_keys"]]
     out["course_link"] = [bool(course_areas and areas_of(c, areas, course_areas)) for c in top]
     extra = []
     for code, keys, linked in zip(top, out["area_keys"], out["course_link"]):
         reasons = []
         if keys and source == "picked":
             reasons.append(f"In an area you picked: {', '.join(labels[k] for k in keys)}")
+        elif keys and source == "predicted":
+            reasons.append(f"In the field students with answers like yours usually aim for: {predicted['field']}")
         if linked:
             reasons.append(f"Linked to your course: {course_label}")
         strong = [r for r in profile["strengths"] if r in needs.columns and needs.at[code, r] >= high_need[r]]
@@ -218,7 +238,13 @@ def personalised(student, data, profile=None, top_n=10, hidden=(), min_job_zone=
     out["extra_reasons"] = extra
     if source == "course":
         notes.append(f"You did not pick areas, so we used the areas linked to your course ({course_label})")
-    return out, {"notes": notes, "chosen_areas": [labels[k] for k in chosen], "areas_from": source}
+    if source == "predicted":
+        notes.append(f"You did not pick areas, so the first {PREDICTED_SLOTS} careers come from the field "
+                     f"that survey students with answers{' and a course' if predicted['used_branch'] else ''} "
+                     f"like yours aimed for: {predicted['field']} "
+                     "(the model's best guess from a small survey). Pick areas in the quiz to choose yourself.")
+    return out, {"notes": notes, "chosen_areas": [labels[k] for k in chosen], "areas_from": source,
+                 "predicted": predicted}
 
 
 __all__ = ["FURTHER_STUDY", "WORK_SETTINGS", "add_work_context", "areas_of", "clean_profile", "load_areas",

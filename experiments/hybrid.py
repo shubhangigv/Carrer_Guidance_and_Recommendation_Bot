@@ -9,6 +9,8 @@ The hybrid uses each for what it is good at:
   3. The top 5 = the engine's best N_FROM_FIELD careers inside the predicted field
                  (config/survey_field_map.csv), then the engine's best others (field diversity on).
 N_FROM_FIELD = 3 was fixed before this was run. Nothing else is tuned.
+Two hybrids: "hybrid" uses the 22 answers; "hybrid_branch" also uses the student's branch (survey Q2),
+which experiments/model_features.py found better (and which the app uses when a course is given).
 
 Honest evaluation: repeated stratified 5-fold cross-validation (5 repeats). The model is trained on 4/5
 of the students and predicts the other 1/5, so no student's own answer is used to predict their field.
@@ -32,6 +34,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "experiments"))
 from hit_rate import random_hit, wilson  # noqa: E402
 from ml_compare import models  # noqa: E402
+from ml.field_model import branch_columns  # noqa: E402
 from ml.localise import apply_local_rules  # noqa: E402
 from ml.recommender_v2 import diversify, eligible_codes, field_of, load_onet_v2, rank_order  # noqa: E402
 from ml.recommender_v3 import HAND_FIT_SHARE, HAND_WEIGHTS, score_all_v3  # noqa: E402
@@ -72,6 +75,9 @@ def hits(top, prefixes):
 def evaluate(tidy, orders, field_map, fields, repeats=REPEATS):
     from sklearn.model_selection import StratifiedKFold
     X, y = feature_table(tidy), tidy["aimed_field"].to_numpy()
+    X_branch = pd.concat([X.reset_index(drop=True), branch_columns(tidy["branch"].fillna("Other").tolist())], axis=1)
+    X_branch.index = X.index
+    inputs = {"hybrid": X, "hybrid_branch": X_branch}
     learnable = pd.Series(y).map(pd.Series(y).value_counts()) >= MIN_TRAIN
     rows = []
     for rep in range(repeats):
@@ -81,15 +87,17 @@ def evaluate(tidy, orders, field_map, fields, repeats=REPEATS):
         cv = StratifiedKFold(n_splits=max(2, min(5, k)), shuffle=True, random_state=SEED + rep)
         for train, test in cv.split(X, strata):
             fit = train[learnable.to_numpy()[train]]
-            model = models()["logreg"]
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                model.fit(X.iloc[fit], y[fit])
-                predicted = model.predict(X.iloc[test])
-            for idx, pred in zip(test, predicted):
-                truth = field_map[y[idx]]
-                rows.append({"repeat": rep, "student": idx, "method": "hybrid", "predicted_field": pred,
-                             **dict(zip([f"hit@{k}" for k in KS], hits(hybrid_top(orders[idx], field_map[pred], fields), truth)))})
+            for method, features in inputs.items():
+                model = models()["logreg"]
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    model.fit(features.iloc[fit], y[fit])
+                    predicted = model.predict(features.iloc[test])
+                for idx, pred in zip(test, predicted):
+                    truth = field_map[y[idx]]
+                    rows.append({"repeat": rep, "student": idx, "method": method, "predicted_field": pred,
+                                 **dict(zip([f"hit@{k}" for k in KS],
+                                            hits(hybrid_top(orders[idx], field_map[pred], fields), truth)))})
     for idx in range(len(tidy)):                   # the engine alone does not depend on the folds
         truth = field_map[y[idx]]
         rows.append({"repeat": -1, "student": idx, "method": "v3", "predicted_field": None,
@@ -132,13 +140,15 @@ def main(argv=None):
     orders = engine_orders(tidy, data, pool)
     per = evaluate(tidy, orders, field_map, fields, args.repeats)
     summary = summarise(per, tidy, field_map, pool)
-    acc = per[per["method"] == "hybrid"].assign(
+    accs = {m: per[per["method"] == m].assign(
         ok=lambda d: d["predicted_field"].to_numpy() == tidy["aimed_field"].to_numpy()[d["student"]])["ok"].mean()
+        for m in ("hybrid", "hybrid_branch")}
 
     args.out.mkdir(parents=True, exist_ok=True)
     summary.to_csv(args.out / "hybrid.csv", index=False)
     print(summary.to_string(index=False))
-    print(f"\nField predicted correctly (held-out, all {len(tidy)} students incl. small fields): {acc:.3f}")
+    print(f"\nField predicted correctly (held-out, all {len(tidy)} students incl. small fields): "
+          + ", ".join(f"{m} {a:.3f}" for m, a in accs.items()))
     print(f"Wrote {args.out / 'hybrid.csv'}")
     return summary
 

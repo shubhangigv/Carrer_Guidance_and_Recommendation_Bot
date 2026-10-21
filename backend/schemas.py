@@ -165,7 +165,7 @@ class RecommendResponse(BaseModel):
     assessment_id: int
     model_version: str
     chosen_areas: list[str] = Field(default_factory=list)
-    areas_from: Optional[Literal["picked", "course"]] = None
+    areas_from: Optional[Literal["picked", "course", "predicted"]] = None
     notes: list[str] = Field(default_factory=list, description="filters used, hidden careers ...")
     recommendations: list[RecommendationOut]
 
