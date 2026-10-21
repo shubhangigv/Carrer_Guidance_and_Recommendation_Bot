@@ -44,6 +44,8 @@ give Windows PowerShell commands, and say how to run and verify it.
 | User test: 1-5 "would you consider it?" on each match (`career_rating`, migration 005), `experiments/user_test.py`, `docs/user_test_protocol.md` | Code DONE (21 Oct); test with 5-10 students NOT run yet |
 | `SHOW_UNVERIFIED_ROUTES` (.env): "no" hides education routes not checked on official sites; a route is verified only if every row is | DONE; all 73 rows still verified=no |
 | `ml_compare.py` with engine_v3 (hand weights): acc 15.9%, macro-F1 0.273 (v2 6.3% / 0.080; logreg 63.5% / 0.585 on 4 fields) | DONE (21 Oct) |
+| Survey study (`experiments/survey_insights.py` -> `insights.md`): interests barely differ by aimed field (eta^2 0.02-0.04), Programming 0.49, CS 0.37, Biology 0.25; 42/69 aim at their branch's field; 4% flat skill answers; 46% of answers are 4-5 | DONE (21 Oct) |
+| Hybrid (`experiments/hybrid.py`): logreg predicts the field (trained on 4/5, tested on 1/5, 5x5 CV), engine v3 hand weights fills the top 3 from it, rest normal. Hit@1/3/5 57.1%/57.1%/64.9% vs v3 15.9%/29.0%/36.2%, random 8.8%/23.6%/35.5%. N_FROM_FIELD=3 fixed before the run | Experiment DONE (21 Oct); NOT in the app yet |
 | React version, `engine.js` v2 for the offline prototype | NOT planned |
 | Survey sent (50+ responses on 16 Oct) | IN PROGRESS (target 100) |
 | Survey scripts: `ml/survey.py`, `experiments/survey_analysis.py`, `hit_rate.py`, `ml_compare.py` (docs/results/survey/README.md) | Scripts DONE + tested on synthetic CSV; NOT run on the real responses yet (raw file stays on the team's PC) |
