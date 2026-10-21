@@ -1,0 +1,5 @@
+responses=75
+not_sure_skipped=6
+unknown_field_skipped=0
+missing_interests_skipped=0
+evaluated=69

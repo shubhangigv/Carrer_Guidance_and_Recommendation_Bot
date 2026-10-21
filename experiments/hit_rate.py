@@ -4,6 +4,8 @@ For every student who chose a field (not "Not sure yet") and answered all 6 inte
 ranks the careers exactly as the app does (Job Zone >= 3, careers excluded for India removed):
   v2           engine v2 with field diversity (what the app shows)
   v2_no_div    engine v2 without the field-diversity re-ranking
+  v3           engine v3 (v2 + strength fit) with its PRE-REGISTERED hand weights, field diversity
+               (the app's CV-tuned weights are evaluated in experiments/tune_weights.py instead)
   v1           engine v1 (correlation; only the numeric answers are used)
   random       expected hit rate if k careers were picked at random from the same pool (exact formula)
 A "hit" = at least one of the top-k careers belongs to the student's field (config/survey_field_map.csv,
@@ -30,6 +32,7 @@ sys.path.insert(0, str(ROOT))
 from ml.baseline_recommender import recommend_v1  # noqa: E402
 from ml.localise import apply_local_rules  # noqa: E402
 from ml.recommender_v2 import eligible_codes, load_onet_v2, recommend_v2  # noqa: E402
+from ml.recommender_v3 import HAND_FIT_SHARE, HAND_WEIGHTS, recommend_v3  # noqa: E402
 from ml.survey import (DEFAULT_SURVEY, NOT_SURE, in_field, is_complete, load_field_map,  # noqa: E402
                        load_survey, to_student, to_student_v1)
 
@@ -71,6 +74,8 @@ def evaluate(tidy, data, field_map, ks=KS):
         tops = {
             "v2": list(recommend_v2(to_student(r), data, top_n=kmax, min_job_zone=MIN_JOB_ZONE, diversity=True)["code"]),
             "v2_no_div": list(recommend_v2(to_student(r), data, top_n=kmax, min_job_zone=MIN_JOB_ZONE, diversity=False)["code"]),
+            "v3": list(recommend_v3(to_student(r), data, top_n=kmax, min_job_zone=MIN_JOB_ZONE, diversity=True,
+                                    weights=HAND_WEIGHTS, fit_share=HAND_FIT_SHARE)["code"]),
             "v1": list(recommend_v1(to_student_v1(r), data, top_n=kmax, min_job_zone=MIN_JOB_ZONE)["code"]),
         }
         for method, top in tops.items():
@@ -119,8 +124,11 @@ def main(argv=None):
     data = apply_local_rules(load_onet_v2(args.onet_dir), args.onet_dir)
     per_student = evaluate(used, data, field_map)
     summary = summarise(per_student)
-    by_field = (per_student[per_student["method"] == "v2"].groupby("aimed_field")
-                .agg(students=("hit@5", "size"), hit_at_5=("hit@5", "mean")).round(3).reset_index())
+    by_field = (per_student[per_student["method"].isin(["v2", "v3"])]
+                .pivot_table(index="aimed_field", columns="method", values="hit@5", aggfunc="mean")
+                .add_prefix("hit_at_5_").round(3))
+    by_field.insert(0, "students", per_student[per_student["method"] == "v2"].groupby("aimed_field").size())
+    by_field = by_field.reset_index()
 
     args.out.mkdir(parents=True, exist_ok=True)
     summary.to_csv(args.out / "hit_rate.csv", index=False)
@@ -132,7 +140,7 @@ def main(argv=None):
         f"responses={n_all}\nnot_sure_skipped={int(unsure.sum())}\nunknown_field_skipped={int(unknown.sum())}\n"
         f"missing_interests_skipped={int((incomplete & ~unsure).sum())}\nevaluated={len(used)}\n", encoding="utf-8")
     print(summary.to_string(index=False))
-    print("\nHit@5 of engine v2 by field:\n" + by_field.to_string(index=False))
+    print("\nHit@5 of engines v2 and v3 by field:\n" + by_field.to_string(index=False))
     print(f"\nWrote {args.out / 'hit_rate.csv'}")
 
 

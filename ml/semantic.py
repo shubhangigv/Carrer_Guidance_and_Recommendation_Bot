@@ -27,6 +27,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CACHE_DIR = PROJECT_ROOT / "data" / "processed"
 SBERT_MODEL = os.getenv("SEMANTIC_MODEL", "all-MiniLM-L6-v2")
 MAX_ALT_TITLES = 10
+# Below this cosine similarity a career is NOT shown: it shares only a common word ("using") with the
+# text, which is noise (e.g. "I love using laptop" -> Tree Trimmer at 0.08 with TF-IDF).
+# Set by hand per method (Sentence-BERT similarities run higher than TF-IDF ones); not tuned on survey data.
+# TF-IDF is weak here (good matches ~0.08-0.10, noise ~0.05-0.07), so install Sentence-BERT for real use.
+MIN_SIMILARITY = {"tfidf": 0.08, "sbert": 0.30}
 
 log = logging.getLogger("pathfinder.semantic")
 
@@ -109,11 +114,19 @@ class SemanticMatcher:
         np.save(path, vectors)
         return vectors
 
-    def match(self, text, top_n=10, codes=None):
-        """Careers most similar to the text, best first: [(code, cosine similarity rounded to 3)]."""
+    @property
+    def min_similarity(self):
+        """The weakest similarity still shown for this method (see MIN_SIMILARITY)."""
+        return MIN_SIMILARITY.get(self.method.split(":")[0], 0.0)
+
+    def match(self, text, top_n=10, codes=None, min_similarity=None):
+        """Careers most similar to the text, best first: [(code, cosine similarity rounded to 3)].
+        Careers below `min_similarity` (default: the method's MIN_SIMILARITY) are left out, so a
+        vague text can return an empty list instead of random careers."""
         text = (text or "").strip()
         if not text:
             return []
+        floor = self.min_similarity if min_similarity is None else min_similarity
         q = self.encoder.encode([text])[0]
         sims = self.vectors @ q
         allowed = None if codes is None else set(codes)
@@ -122,7 +135,7 @@ class SemanticMatcher:
         for i in order:
             if allowed is not None and self.codes[i] not in allowed:
                 continue
-            if sims[i] <= 0:
+            if sims[i] <= 0 or sims[i] < floor:
                 break
             out.append((self.codes[i], round(float(sims[i]), 3)))
             if len(out) == top_n:
