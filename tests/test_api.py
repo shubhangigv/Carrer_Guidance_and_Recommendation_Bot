@@ -303,7 +303,7 @@ def test_profile_is_saved_and_used(client):
     aid = client.post("/assessment", json=body, headers=headers).json()["assessment_id"]
     res = client.get("/recommend", params={"assessment_id": aid}, headers=headers).json()
     assert res["areas_from"] == "picked" and res["chosen_areas"] == ["Science & research"]
-    assert all(r["group"] in {"your_areas", "also_consider"} for r in res["recommendations"])
+    assert all(r["group"] in {"your_areas", "also_consider", "all"} for r in res["recommendations"])
 
 
 def test_bad_profile_is_rejected(client):
@@ -357,7 +357,10 @@ def test_recommend_uses_the_field_model_when_no_areas(client, ctx):
             return {"field": "Arts, Design & Media", "probability": 0.9, "prefixes": ["27"], "used_branch": False}
     ctx.field_model = FakeModel()
     headers = login(client)
-    aid = client.post("/assessment", json=FULL_ANSWERS, headers=headers).json()["assessment_id"]
+    # no weak points in what the fake Designer needs (art/design, leadership), so it may fill the suggested place
+    body = {**FULL_ANSWERS, "skills": {**FULL_ANSWERS["skills"], "Leadership": {"rating": 4}},
+            "subjects": {**FULL_ANSWERS["subjects"], "Arts/Design": {"rating": 4}}}
+    aid = client.post("/assessment", json=body, headers=headers).json()["assessment_id"]
     res = client.get("/recommend", params={"assessment_id": aid}, headers=headers).json()
     assert res["areas_from"] == "predicted" and res["chosen_areas"] == ["Arts, Design & Media"]
     first = res["recommendations"][0]

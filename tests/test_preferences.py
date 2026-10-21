@@ -150,3 +150,36 @@ def test_add_work_context_reads_the_file(tmp_path, data):
     prefs.add_work_context(data, tmp_path)
     assert data["work_context"].loc[LAB, "outdoors"] == pytest.approx(1.2)
     assert data["work_context"].loc[LAB, "sitting"] == pytest.approx(4.4)
+
+
+# ---------------------------------------------------------------- weak points (21 Oct)
+def test_weakness_pick_overrides_a_higher_rating(data, areas, courses):
+    s = scientist()
+    s["skills"]["Research"] = {"rating": 5}
+    out, info = prefs.personalised(s, data, {"weaknesses": ["Research"]}, top_n=3, min_job_zone=None,
+                                   areas=areas, courses=courses)
+    assert any("we used 'Weak'" in n for n in info["notes"])
+    lowered, rows = prefs._apply_weakness_picks(s, ["Research"])
+    assert lowered["skills"]["Research"] == {"rating": prefs.WEAK_RATING} and rows == ["Research"]
+    assert s["skills"]["Research"] == {"rating": 5}                    # the caller's answers are not changed
+
+
+def test_careers_that_need_a_weak_point_go_last_and_say_why(data, areas, courses):
+    s = scientist()
+    s["subjects"]["Biology"] = "not_studied"                           # the Lab Scientist's key subject
+    out, _ = prefs.personalised(s, data, {}, top_n=3, min_job_zone=None, areas=areas, courses=courses)
+    lab = out[out["code"] == LAB].iloc[0]
+    assert lab["rank"] == 3 and lab["extra_reasons"][0].startswith("Heads-up: needs Biology")
+
+
+def test_automatic_areas_never_filled_with_a_clash(data, areas, courses, monkeypatch):
+    class Model:
+        def predict(self, student, branch=None):
+            return {"field": "Labs", "probability": 0.9, "prefixes": ["19-0"], "used_branch": False}
+    s = scientist()
+    s["subjects"]["Biology"] = "not_studied"
+    out, info = prefs.personalised(s, data, {}, top_n=3, min_job_zone=None, areas=areas, courses=courses,
+                                   field_model=Model())
+    assert set(out["group"]) == {"all"} and any("did not put them first" in n for n in info["notes"])
+    picked, _ = prefs.personalised(s, data, {"areas": ["lab"]}, top_n=3, min_job_zone=None, areas=areas, courses=courses)
+    assert picked.iloc[0]["code"] == LAB                               # an area the student PICKED is still shown first

@@ -72,3 +72,11 @@ def test_matching_profile_ranks_first(data):
     assert top.iloc[0]["code"] == LAB
     assert {"skill_fit", "subject_fit", "match_low", "display"} <= set(top.columns)
 
+
+
+def test_row_needs_use_importance_even_without_a_level(data):
+    from ml.recommender_v3 import career_row_needs
+    _, cats = score_all_v3(SCIENTIST, data)
+    cats["skill"]["valid"].loc[LAB, :] = False                          # as if every level were suppressed
+    needs = career_row_needs(cats["skill"], SKILL_MAP_V2)
+    assert not pd.isna(needs.at[LAB, "Research"])                       # importance is still used

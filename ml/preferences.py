@@ -23,7 +23,15 @@ they want - so results felt random. This file adds those answers on top, in plai
                survey), the field it predicts from the 22 answers fills the first PREDICTED_SLOTS places -
                the cross-validated "hybrid" of experiments/hybrid.py.
   5. Reasons   "In an area you picked", "Linked to your course", "Uses your strength: Programming" (only when
-               this career needs that skill more than 75% of careers do).
+               this career needs that skill more than 75% of careers do AND rates it important, IM >= 3).
+  6. Clashes   a career CLASHES with the student when it needs one of their weak points more than 75% of
+               careers do and rates it important (IM >= 3) - the same rule as 5. Weak points: skills picked as weakest, and skill/subject rows rated
+               1-2 or answered "no experience" / "not studied". Clashing careers go after non-clashing ones in
+               every group (order kept otherwise) and, if still shown, say why ("Needs Programming more than
+               most careers - you marked it as a weakness").
+  Clashing careers never fill places chosen AUTOMATICALLY (predicted field, course areas).
+  A skill picked as one of the 2 weakest but RATED 3 or more is scored as 2 ("Weak"): the later, explicit
+  choice wins over the rating (the page says so).
 
 No weight or threshold here was tuned on the survey. The survey's Hit@k evaluation does NOT use this
 file (it would be circular: a student who picks "Computers & IT" will of course get IT careers).
@@ -35,7 +43,7 @@ from pathlib import Path
 import pandas as pd
 
 from ml.baseline_recommender import _read
-from ml.recommender_v2 import SKILL_MAP_V2, diversify, eligible_codes, rank_order
+from ml.recommender_v2 import NONE_YET, RATED, SKILL_MAP_V2, SUBJECT_MAP_V2, diversify, eligible_codes, parse_answer, rank_order
 from ml.recommender_v3 import career_row_needs, result_frame, score_all_v3
 
 CONFIG = Path(__file__).resolve().parents[1] / "config"
@@ -45,6 +53,8 @@ MIN_POOL = 30                # a filter that leaves fewer careers than this is s
 OUTDOOR_CX = 3.5             # desk filter: outdoor work about weekly or more
 SITTING_CX = 4.0             # active filter: sitting more than half the time
 STRENGTH_QUANTILE = 0.75     # "uses your strength" only if this career needs that skill more than 75% of careers do
+WEAK_RATING = 2              # a picked weakness rated higher than this is scored as this; ratings <= this are weak points
+IMPORTANT_IM = 3.0           # ... and the need must also be important in itself (IM >= 3, as for skill gaps in engine v2)
 MAX_AREAS, MAX_STRENGTHS, MAX_WEAKNESSES = 3, 3, 2
 WORK_SETTINGS = {"desk": "Mostly at a desk / indoors", "active": "Active, on my feet or outdoors", "any": "No preference"}
 FURTHER_STUDY = {"no": "No - I want to work after my current degree", "yes": "Yes - a master's, PhD or long degree is fine",
@@ -155,6 +165,35 @@ def _apply_filters(pool, data, profile, notes):
     return pool
 
 
+def _apply_weakness_picks(student, weaknesses):
+    """A skill picked as weakest but rated above WEAK_RATING is scored as WEAK_RATING. Returns (student, lowered rows)."""
+    skills, lowered = dict(student.get("skills", {})), []
+    for row in weaknesses:
+        status, rating = parse_answer(skills.get(row))
+        if status == RATED and rating > WEAK_RATING:
+            skills[row] = {"rating": WEAK_RATING}
+            lowered.append(row)
+    return {**student, "skills": skills}, lowered
+
+
+def _clashes(student, weaknesses, cats):
+    """{career code: [weak rows this career needs more than STRENGTH_QUANTILE of careers do]}."""
+    weak = []
+    for key, mapping, cat in (("skills", SKILL_MAP_V2, "skill"), ("subjects", SUBJECT_MAP_V2, "subject")):
+        for row in mapping:
+            status, rating = parse_answer(student.get(key, {}).get(row))
+            if (cat == "skill" and row in weaknesses) or status in NONE_YET or (status == RATED and rating <= WEAK_RATING):
+                weak.append((cat, row, mapping))
+    out = {}
+    needs = {cat: career_row_needs(cats[cat], mapping) for cat, mapping in
+             (("skill", SKILL_MAP_V2), ("subject", SUBJECT_MAP_V2))}
+    high = {cat: n.quantile(STRENGTH_QUANTILE) for cat, n in needs.items()}
+    for code in needs["skill"].index:
+        out[code] = [row for cat, row, _ in weak
+                     if row in needs[cat].columns and needs[cat].at[code, row] >= max(high[cat][row], IMPORTANT_IM)]
+    return out
+
+
 def _spread(codes, area_of, n, n_areas):
     """The best n careers, at most ceil(n / n_areas) from each picked area (then fill with the next best)."""
     if n_areas <= 1:
@@ -172,8 +211,12 @@ def personalised(student, data, profile=None, top_n=10, hidden=(), min_job_zone=
     areas = load_areas() if areas is None else areas
     courses = load_courses(areas=areas) if courses is None else courses
     profile = clean_profile(profile, areas, courses)
-    student = {**student, "strengths": profile["strengths"], "weaknesses": profile["weaknesses"]}
     notes = []
+    student, lowered = _apply_weakness_picks(student, profile["weaknesses"])
+    if lowered:
+        notes.append(f"You picked {', '.join(lowered)} as one of your weakest skills but rated it higher earlier - "
+                     f"we used 'Weak' for {'them' if len(lowered) > 1 else 'it'}")
+    student = {**student, "strengths": profile["strengths"], "weaknesses": profile["weaknesses"]}
 
     pool = eligible_codes(data, min_job_zone)
     hidden = set(hidden)
@@ -183,7 +226,9 @@ def personalised(student, data, profile=None, top_n=10, hidden=(), min_job_zone=
     pool = _apply_filters(pool, data, profile, notes)
 
     table, cats = score_all_v3(student, data, pool)
+    clashes = _clashes(student, profile["weaknesses"], cats)
     order = list(rank_order(table))
+    order = [c for c in order if not clashes[c]] + [c for c in order if clashes[c]]   # clashing careers last
 
     course_areas = courses.at[profile["course"], "areas"] if profile["course"] else []
     predicted = None
@@ -203,11 +248,14 @@ def personalised(student, data, profile=None, top_n=10, hidden=(), min_job_zone=
     in_area = {c: areas_of(c, areas, chosen) for c in order} if chosen else {}
     if chosen:
         mine = [c for c in order if in_area[c]]
+        if source in ("predicted", "course"):          # chosen automatically: never fill with a clash
+            mine = [c for c in mine if not clashes[c]]
         rest = [c for c in order if not in_area[c]]
         n_mine = min(len(mine), PREDICTED_SLOTS if source == "predicted" else max(top_n - ALSO_CONSIDER, 1))
         top_mine = _spread(mine, {c: in_area[c][0] for c in mine}, n_mine, len(chosen))
         top = top_mine + diversify(rest, table["field"])[:top_n - len(top_mine)]
-        groups = ["your_areas"] * len(top_mine) + ["also_consider"] * (len(top) - len(top_mine))
+        groups = (["your_areas"] * len(top_mine) + ["also_consider"] * (len(top) - len(top_mine)) if top_mine
+                  else ["all"] * len(top))
     else:
         top = diversify(order, table["field"])[:top_n]
         groups = ["all"] * len(top)
@@ -230,15 +278,23 @@ def personalised(student, data, profile=None, top_n=10, hidden=(), min_job_zone=
             reasons.append(f"In the field students with answers like yours usually aim for: {predicted['field']}")
         if linked:
             reasons.append(f"Linked to your course: {course_label}")
-        strong = [r for r in profile["strengths"] if r in needs.columns and needs.at[code, r] >= high_need[r]]
+        strong = [r for r in profile["strengths"] if r in needs.columns
+                  and needs.at[code, r] >= max(high_need[r], IMPORTANT_IM)]
         if strong:
             reasons.append(f"Uses your strength{'s' if len(strong) > 1 else ''}: {', '.join(strong)} - "
                            "needed here more than in most careers")
+        if clashes[code]:
+            reasons.insert(0, "Heads-up: needs " + ", ".join(clashes[code]) + " more than most careers - "
+                           "you marked " + ("it" if len(clashes[code]) == 1 else "them") + " as weak")
         extra.append(reasons)
     out["extra_reasons"] = extra
     if source == "course":
         notes.append(f"You did not pick areas, so we used the areas linked to your course ({course_label})")
-    if source == "predicted":
+    if source in ("predicted", "course") and not any(g == "your_areas" for g in groups):
+        suggested = predicted["field"] if source == "predicted" else ", ".join(labels[k] for k in chosen)
+        notes.append(f"Your answers and course point to {suggested}, but those careers rely on skills or subjects "
+                     "you marked as weak, so we did not put them first. Pick areas in the quiz if you still want them.")
+    elif source == "predicted":
         notes.append(f"You did not pick areas, so the first {PREDICTED_SLOTS} careers come from the field "
                      f"that survey students with answers{' and a course' if predicted['used_branch'] else ''} "
                      f"like yours aimed for: {predicted['field']} "

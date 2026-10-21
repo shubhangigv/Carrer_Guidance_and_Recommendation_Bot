@@ -23,12 +23,11 @@ What v3 adds: STRENGTH FIT, per category (skills, subjects).
   v2 (ml/recommender_v2.py): the fit term is the same in the low and high bound, because it only uses
   known answers.
 
-Two weight settings:
-  HAND_*   interest 0.25 / skill 0.30 / subject 0.15, fit share 0.5 - chosen BEFORE any survey result
-           (the pre-registered v3; experiments/hit_rate.py reports it as "v3").
-  WEIGHTS  interest 0.3 / skill 0.4 / subject 0.3, fit share 0.75 - chosen by experiments/tune_weights.py
-           (5-fold CV x 5 on the survey). Used by the app. Report its CROSS-VALIDATED Hit@k
-           (docs/results/survey/tuned_weights.json), never an in-sample number.
+Weights: HAND_* = interest 0.25 / skill 0.30 / subject 0.15, fit share 0.5, chosen BEFORE any survey result
+(experiments/hit_rate.py reports them as "v3"). The app uses them too (WEIGHTS = HAND_WEIGHTS): after the
+21 Oct fix in career_row_needs, weights tuned by experiments/tune_weights.py (5-fold CV x 5) no longer beat
+them on held-out students (CV Hit@1/@5 13.1%/29.9% vs 14.5%/31.9%), so there is no evidence for tuned weights.
+Before the fix, tuned weights (0.3/0.4/0.3, fit 0.75) were used; that result was measured on partly ignored data.
 """
 import numpy as np
 import pandas as pd
@@ -40,8 +39,8 @@ from ml.recommender_v2 import (CATEGORIES, NONE_YET, RATED, _critical_names,
 MODEL_VERSION = "v3"
 HAND_WEIGHTS = {"interest": 0.25, "skill": 0.30, "subject": 0.15}   # pre-registered (= v2's weights)
 HAND_FIT_SHARE = 0.5
-WEIGHTS = {"interest": 0.3, "skill": 0.4, "subject": 0.3}           # tuned by CV (experiments/tune_weights.py)
-FIT_SHARE = 0.75             # share of strength fit inside the skill and subject parts (rest = readiness)
+WEIGHTS = dict(HAND_WEIGHTS)  # what the app uses (tuning did not beat the pre-registered weights, see above)
+FIT_SHARE = HAND_FIT_SHARE   # share of strength fit inside the skill and subject parts (rest = readiness)
 MIN_FIT_ROWS = 3             # fewer usable rows than this -> neutral fit 0.5
 PICK_BONUS = 1.0             # "my 3 strongest skills" +1, "my 2 weakest" -1 (strength fit only, not readiness)
 
@@ -69,8 +68,12 @@ def student_row_values(answers, mapping, strengths=(), weaknesses=()):
 
 
 def career_row_needs(cat_details, mapping):
-    """Careers x survey rows: mean importance (IM 1-5) of the row's elements that have data."""
-    im = cat_details["im"].where(cat_details["valid"])
+    """Careers x survey rows: mean importance (IM 1-5) of the row's elements that have an IM value.
+
+    Only IM is needed here. (Until 21 Oct this also required a level (LV), which O*NET sometimes flags as
+    unreliable while the importance is fine - e.g. Software Developers' Programming level - so ~1,000
+    importance values were wrongly ignored. Readiness still needs both IM and LV.)"""
+    im = cat_details["im"]
     cols = {}
     for row, elements in mapping.items():
         present = [e for e in elements if e in im.columns]
