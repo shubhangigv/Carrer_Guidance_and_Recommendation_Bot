@@ -1,31 +1,31 @@
 feature,importance
-skill:Programming,0.0911
-subject:Commerce/Economics,0.076
-subject:Computer Science,0.0659
-subject:Biology,0.0588
-subject:Mathematics,0.0564
-subject:Social Sciences,0.0537
-skill:Technical/Practical Skills,0.0469
-Social,0.0428
-subject:Physics/Chemistry,0.0422
-skill:Research,0.0412
-Realistic,0.0405
-subject:Arts/Design,0.039
-skill:Mathematics,0.0372
-skill:Communication,0.037
-Artistic,0.0339
-skill:Writing,0.0312
-Enterprising,0.0298
-subject:Languages,0.0282
-skill:Leadership,0.0278
-Conventional,0.0265
-Investigative,0.0257
-skill:Problem Solving,0.0251
-missingindicator_skill:Mathematics,0.0071
-missingindicator_skill:Research,0.0062
-missingindicator_skill:Problem Solving,0.006
-missingindicator_skill:Communication,0.0057
-missingindicator_skill:Programming,0.0057
-missingindicator_skill:Technical/Practical Skills,0.0045
-missingindicator_skill:Writing,0.0043
-missingindicator_skill:Leadership,0.0036
+Social,0.0839
+skill:Programming,0.0782
+subject:Computer Science,0.0652
+subject:Commerce/Economics,0.0597
+subject:Biology,0.0592
+subject:Social Sciences,0.053
+Realistic,0.0515
+subject:Languages,0.0509
+skill:Mathematics,0.0436
+subject:Mathematics,0.0436
+skill:Leadership,0.041
+Enterprising,0.0402
+subject:Physics/Chemistry,0.0382
+skill:Technical/Practical Skills,0.0382
+skill:Research,0.0337
+skill:Communication,0.0294
+skill:Writing,0.0289
+Artistic,0.0279
+Conventional,0.0274
+subject:Arts/Design,0.0271
+Investigative,0.0268
+skill:Problem Solving,0.0219
+missingindicator_skill:Mathematics,0.0044
+missingindicator_skill:Research,0.0042
+missingindicator_skill:Programming,0.0041
+missingindicator_skill:Technical/Practical Skills,0.0041
+missingindicator_skill:Problem Solving,0.004
+missingindicator_skill:Writing,0.0039
+missingindicator_skill:Leadership,0.0034
+missingindicator_skill:Communication,0.0024

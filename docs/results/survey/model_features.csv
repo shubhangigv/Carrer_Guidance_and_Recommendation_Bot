@@ -1,5 +1,5 @@
 features,n_features,students,folds,repeats,accuracy_mean,accuracy_std,macro_f1_mean,macro_f1_std,beats_answers22_on_both
-answers22,22,63,5,5,0.635,0.036,0.585,0.033,False
-answers22+branch,28,63,5,5,0.74,0.022,0.68,0.036,True
-skills+subjects,16,63,5,5,0.581,0.026,0.542,0.024,False
-branch_only,6,63,5,5,0.667,0.0,0.526,0.0,False
+answers22,22,77,3,5,0.605,0.019,0.527,0.046,False
+answers22+branch,28,77,3,5,0.696,0.027,0.636,0.023,True
+skills+subjects,16,77,3,5,0.587,0.024,0.464,0.033,False
+branch_only,6,77,3,5,0.53,0.031,0.391,0.011,False

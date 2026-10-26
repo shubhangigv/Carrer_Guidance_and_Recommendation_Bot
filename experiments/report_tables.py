@@ -104,12 +104,13 @@ def ml_vs_engine(r):
                         "Macro-F1": [f"{f:.3f} ± {s:.3f}" if t else f"{f:.3f}"
                                      for f, s, t in zip(df["macro_f1_mean"], df["macro_f1_std"], df["trained"])]})
     counts = (RES / "survey" / "ml_counts.txt")
-    extra = ""
+    extra, folds = "", "5"
     if counts.exists():
         kv = dict(l.split("=", 1) for l in counts.read_text(encoding="utf-8").splitlines() if "=" in l)
         extra = f" {kv.get('students_used', '?')} students in {kv.get('fields', '?')} fields;"
+        folds = kv.get("folds", "5")
     r.table("Predicting the aimed field: supervised ML vs the knowledge-based engine", out,
-            f"Repeated stratified 5-fold cross-validation (mean ± std over 5 repeats);{extra} fields with fewer than 3 "
+            f"Repeated stratified {folds}-fold cross-validation (mean ± std over 5 repeats);{extra} fields with fewer than 3 "
             "students left out. The models choose between these fields only; the engine ranks ~900 careers, so this "
             "comparison favours the models.")
 

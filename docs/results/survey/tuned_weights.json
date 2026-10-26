@@ -6,11 +6,11 @@
     "fit_share": 0.75
   },
   "cv_hit_rate": {
-    "cv_hit@1": 0.131,
-    "cv_hit@3": 0.252,
-    "cv_hit@5": 0.299
+    "cv_hit@1": 0.146,
+    "cv_hit@3": 0.299,
+    "cv_hit@5": 0.365
   },
-  "students": 69,
+  "students": 81,
   "folds": 5,
   "repeats": 5,
   "note": "cv_hit_rate is the honest estimate; the final weights were then chosen on all students"

@@ -1,7 +1,7 @@
 model,trained,folds,repeats,accuracy_mean,accuracy_std,macro_f1_mean,macro_f1_std
-majority,True,5.0,5.0,0.365,0.0,0.134,0.0
-logreg,True,5.0,5.0,0.635,0.036,0.585,0.033
-forest,True,5.0,5.0,0.578,0.029,0.46,0.016
-svm,True,5.0,5.0,0.619,0.04,0.492,0.033
-engine_v2,False,,,0.063,0.0,0.08,0.0
-engine_v3,False,,,0.143,0.0,0.236,0.0
+majority,True,3.0,5.0,0.351,0.0,0.104,0.0
+logreg,True,3.0,5.0,0.605,0.019,0.527,0.046
+forest,True,3.0,5.0,0.577,0.03,0.383,0.028
+svm,True,3.0,5.0,0.584,0.012,0.412,0.05
+engine_v2,False,,,0.078,0.0,0.083,0.0
+engine_v3,False,,,0.143,0.0,0.199,0.0
