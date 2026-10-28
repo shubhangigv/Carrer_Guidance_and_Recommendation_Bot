@@ -4,7 +4,7 @@ Trained on the survey (data/raw/survey/responses.csv, question 8 = the field eac
 Logistic Regression - the model that did best in experiments/ml_compare.py. Two versions are trained:
   with_branch   the 22 answers + the student's branch (survey Q2). Used when the student gave their course
                 (config/course_areas.csv maps each course to a Q2 option). Best in experiments/model_features.py:
-                74.0% accuracy vs 63.5% without the branch (4 fields, 63 students, cross-validated).
+                69.6% accuracy vs 60.5% without the branch (final survey: 5 fields, 77 students, cross-validated).
   answers_only  used when no course was given.
 Used by the app when a student picks no areas (ml/preferences.py): engine v3 then fills the first places
 from the predicted field - the "hybrid" evaluated in experiments/hybrid.py.

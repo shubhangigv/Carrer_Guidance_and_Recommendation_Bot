@@ -26,7 +26,8 @@ What v3 adds: STRENGTH FIT, per category (skills, subjects).
 Weights: HAND_* = interest 0.25 / skill 0.30 / subject 0.15, fit share 0.5, chosen BEFORE any survey result
 (experiments/hit_rate.py reports them as "v3"). The app uses them too (WEIGHTS = HAND_WEIGHTS): after the
 21 Oct fix in career_row_needs, weights tuned by experiments/tune_weights.py (5-fold CV x 5) no longer beat
-them on held-out students (CV Hit@1/@5 13.1%/29.9% vs 14.5%/31.9%), so there is no evidence for tuned weights.
+them on held-out students on both measures (final survey: CV Hit@1/@5 14.6%/36.5% vs 14.8%/35.8%),
+so there is no clear evidence for tuned weights.
 Before the fix, tuned weights (0.3/0.4/0.3, fit 0.75) were used; that result was measured on partly ignored data.
 """
 import numpy as np

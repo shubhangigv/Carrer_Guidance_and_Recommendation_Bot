@@ -1,8 +1,8 @@
 """Hybrid: an ML model predicts the student's career FIELD, then engine v3 ranks careers inside it.
 
 Why: on the survey, the 6 interest answers barely differ between fields (survey_insights.md), so the
-engine - which leans on interests - rarely puts the aimed field first (v3 Hit@1 15.9%). A Logistic
-Regression on all 22 answers predicts the aimed field far better (63.5% on 4 fields, ml_compare.csv).
+engine - which leans on interests - rarely puts the aimed field first (v3 Hit@1 14.8%). A Logistic
+Regression on all 22 answers predicts the aimed field far better (60.5% on 5 fields, ml_compare.csv).
 The hybrid uses each for what it is good at:
   1. Logistic Regression (the ml_compare pipeline, no tuning) predicts the field from the 22 answers.
   2. Engine v3 (pre-registered hand weights) ranks all careers as usual.

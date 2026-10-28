@@ -234,7 +234,7 @@ def personalised(student, data, profile=None, top_n=10, hidden=(), min_job_zone=
     predicted = None
     if not profile["areas"] and field_model is not None:
         # the field model (answers + branch from the course) beat the fixed course -> areas rule:
-        # 74.0% vs 66.7% for the branch alone (experiments/model_features.py)
+        # 69.6% vs 53.0% for the branch alone (experiments/model_features.py, 87 responses)
         branch = (courses.at[profile["course"], "survey_branch"]
                   if profile["course"] and "survey_branch" in courses.columns else None)
         predicted = field_model.predict(student, branch or None)
