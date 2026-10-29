@@ -134,3 +134,35 @@ def test_chat_endpoint_reports_gemini_errors(client, monkeypatch):
                         lambda key: real(key, "m", httpx.Client(transport=httpx.MockTransport(refuse))))
     r = client.post("/assistant/chat", json={"message": "hello"})
     assert r.status_code == 502 and "GEMINI_API_KEY" in r.json()["detail"]
+
+
+def busy_mock(seen, busy_models):
+    """Models in busy_models answer 503 "high demand" (as Google did on 29 Oct); the others answer."""
+    def handler(request):
+        seen.append(request.url.path)
+        if any(f"/{m}:" in request.url.path for m in busy_models):
+            return httpx.Response(503, json={"error": {"code": 503, "message": "high demand"}})
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "Backup answer."}]}}]})
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+def test_gemini_busy_retries_then_uses_a_backup_model(ctx, monkeypatch):
+    monkeypatch.setattr(assistant, "RETRY_WAIT_SECONDS", 0)
+    monkeypatch.delenv("GEMINI_BACKUP_MODELS", raising=False)
+    seen = []
+    client = assistant.GeminiClient("k", model="main-model", http=busy_mock(seen, ["main-model"]))
+    reply, mode = assistant.answer(ctx, "hi", [], [LAB], client=client)
+    assert (reply, mode) == ("Backup answer.", "gemini")
+    assert [p.split("/")[-1] for p in seen] == ["main-model:generateContent", "main-model:generateContent",
+                                                f"{assistant.BACKUP_MODELS[0]}:generateContent"]
+    assert client.model == "main-model"                 # the main model is tried first again next time
+
+
+def test_gemini_all_busy_gives_a_clear_message(ctx, monkeypatch):
+    monkeypatch.setattr(assistant, "RETRY_WAIT_SECONDS", 0)
+    monkeypatch.setenv("GEMINI_BACKUP_MODELS", "b1, b2")
+    seen = []
+    client = assistant.GeminiClient("k", model="m", http=busy_mock(seen, ["m", "b1", "b2"]))
+    with pytest.raises(assistant.GeminiError, match="very busy"):
+        client.generate("system", [{"role": "user", "text": "hi"}])
+    assert len(seen) == 4                               # m, m again, b1, b2

@@ -644,6 +644,9 @@ Report tables:     python experiments\report_tables.py
   - "OpenBLAS ... memory allocation failed": low memory -> close programs; or
     $env:OPENBLAS_NUM_THREADS=1 before running Python.
   - Chatbot says offline: no GEMINI_API_KEY in .env (or no internet).
+  - Chatbot "Gemini error 503 / very busy": Google's servers are overloaded. The app retries and then
+    uses backup models (gemini-3.5-flash-lite, gemini-3.1-flash-lite; GEMINI_BACKUP_MODELS in .env);
+    if all are busy, wait a minute. gemini-2.5-flash no longer works for new keys (29 Oct).
   - No "Suggested field" on matches: no survey file on that PC, or USE_FIELD_MODEL=no, or the student
     picked areas (their choice wins).
   - Old results in the browser: press Ctrl+F5, or "Change my answers" -> "See my matches".

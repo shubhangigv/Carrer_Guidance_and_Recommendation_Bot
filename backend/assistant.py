@@ -16,6 +16,7 @@ Settings (.env): GEMINI_API_KEY (from https://aistudio.google.com), GEMINI_MODEL
 import logging
 import os
 import re
+import time
 
 import httpx
 
@@ -25,8 +26,13 @@ log = logging.getLogger("pathfinder.assistant")
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta"
 DEFAULT_MODEL = "gemini-3.5-flash"   # 29 Oct: gemini-2.5-flash closed to new keys; 3.7/3.8-flash timed out
+# Used one by one when the main model is busy (503 "high demand", 429 limit, timeout); all checked on 29 Oct.
+# Change with GEMINI_BACKUP_MODELS in .env (comma-separated).
+BACKUP_MODELS = ("gemini-3.5-flash-lite", "gemini-3.1-flash-lite")
+BUSY_CODES = (429, 500, 502, 503, 504)
+RETRY_WAIT_SECONDS = 1.5
 MAX_RECORDS = 8
-TIMEOUT_SECONDS = 40
+TIMEOUT_SECONDS = 25
 
 SYSTEM_PROMPT = """You are Pathfinder's career assistant for students in India (mostly college students).
 Be warm, practical and brief: at most about 150 words unless the student asks for detail. Use simple English.
@@ -49,6 +55,11 @@ Rules:
 
 def gemini_key():
     return (os.getenv("GEMINI_API_KEY") or "").strip()
+
+
+def backup_models():
+    text = os.getenv("GEMINI_BACKUP_MODELS", "")
+    return [m.strip() for m in text.split(",") if m.strip()] or list(BACKUP_MODELS)
 
 
 def career_record(ctx, code, student=None):
@@ -125,6 +136,14 @@ class GeminiClient:
         return self.http.post(f"{GEMINI_URL}/models/{model}:generateContent", json=body,
                               headers={"x-goog-api-key": self.key, "Content-Type": "application/json"})
 
+    def _post_busy_safe(self, model, body):
+        """Like _post, but a timeout or network error returns None (treated as "busy") instead of crashing."""
+        try:
+            return self._post(model, body)
+        except httpx.HTTPError as e:
+            log.warning("Gemini model %s did not answer: %s", model, type(e).__name__)
+            return None
+
     def _pick_available_model(self):
         """When the configured model no longer exists: ask Google which models this key can use and pick
         a current general 'flash' model (else the first that supports generateContent)."""
@@ -144,13 +163,23 @@ class GeminiClient:
                 "contents": [{"role": "model" if t["role"] == "assistant" else "user", "parts": [{"text": t["text"]}]}
                              for t in turns],
                 "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens}}
-        r = self._post(self.model, body)
-        if r.status_code == 404:                     # model retired or renamed
+        r = self._post_busy_safe(self.model, body)
+        if r is not None and r.status_code == 404:   # model retired or renamed
             better = self._pick_available_model()
             if better and better != self.model:
                 log.warning("Gemini model %s not found; using %s (set GEMINI_MODEL in .env)", self.model, better)
                 self.model = better
-                r = self._post(self.model, body)
+                r = self._post_busy_safe(self.model, body)
+        if r is None or r.status_code in BUSY_CODES:   # busy: try once more, then the smaller backup models
+            time.sleep(RETRY_WAIT_SECONDS)
+            for model in [self.model] + [m for m in backup_models() if m != self.model]:
+                r = self._post_busy_safe(model, body)
+                if r is not None and r.status_code not in BUSY_CODES:
+                    if model != self.model:
+                        log.warning("Gemini model %s busy; answered with %s", self.model, model)
+                    break
+        if r is None or r.status_code in (500, 502, 503, 504):
+            raise GeminiError("Gemini is very busy right now (Google's servers). Please try again in a minute.")
         if r.status_code in (401, 403):
             raise GeminiError("Gemini refused the API key. Check GEMINI_API_KEY in .env.")
         if r.status_code == 429:
