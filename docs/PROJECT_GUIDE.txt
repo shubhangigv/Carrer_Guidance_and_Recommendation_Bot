@@ -314,7 +314,7 @@ which method was used.
 
 Chatbot (backend/assistant.py): RAG = Retrieval-Augmented Generation. For a question, it retrieves up
 to 8 relevant career records (text matcher + the student's own matches), sends them with the question
-to Google Gemini (default model gemini-2.5-flash, key GEMINI_API_KEY in .env), and Gemini must answer
+to Google Gemini (default model gemini-3.5-flash, key GEMINI_API_KEY in .env), and Gemini must answer
 only from those records. Without a key it runs in offline mode (lists matching careers). Unverified
 education routes are flagged to the model as "not yet checked".
 
@@ -408,7 +408,7 @@ rated the same, text matches with an inline editor.
   Random Forest, SVM (RBF), majority Yes, only in CV     experiments/ml_compare.py comparison only
   Sentence-BERT all-MiniLM-L6-v2     Pre-trained (used)  text matching
   TF-IDF                             Fit on career text  fallback if Sentence-BERT missing
-  Google Gemini (gemini-2.5-flash)   Pre-trained (API)   chatbot
+  Google Gemini (gemini-3.5-flash)   Pre-trained (API)   chatbot
   XGBoost                            NOT run             package not installed (future work)
 
 
@@ -591,7 +591,7 @@ CLAUDE.md                  full technical context and status; README.md  setup a
 .env (copy .env.example; never commit):
   MYSQL_HOST/PORT/USER/PASSWORD/DATABASE   database connection
   JWT_SECRET (long random), JWT_EXPIRE_MINUTES (60)
-  GEMINI_API_KEY, GEMINI_MODEL (gemini-2.5-flash)    chatbot
+  GEMINI_API_KEY, GEMINI_MODEL (gemini-3.5-flash)    chatbot
   ENGINE_VERSION=v3 (or v2)
   SHOW_UNVERIFIED_ROUTES=yes (no = only checked routes)
   USE_FIELD_MODEL=yes (no = switch the field model off)

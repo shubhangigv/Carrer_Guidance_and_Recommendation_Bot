@@ -88,7 +88,10 @@ def gemini_mock(seen, missing_model=None):
     def handler(request):
         if request.method == "GET":                     # list models
             return httpx.Response(200, json={"models": [
+                {"name": "models/gemini-10-flash", "supportedGenerationMethods": ["generateContent"]},
                 {"name": "models/gemini-9-flash", "supportedGenerationMethods": ["generateContent"]},
+                {"name": "models/gemini-omni-1-flash", "supportedGenerationMethods": ["generateContent"]},
+                {"name": "models/gemini-flash-latest", "supportedGenerationMethods": ["generateContent"]},
                 {"name": "models/gemini-9-flash-preview", "supportedGenerationMethods": ["generateContent"]},
                 {"name": "models/text-embedding", "supportedGenerationMethods": ["embedContent"]}]})
         seen.append(request)
@@ -118,7 +121,8 @@ def test_gemini_retired_model_falls_back_to_available_flash(ctx):
     seen = []
     client = assistant.GeminiClient("k", model="gemini-old", http=gemini_mock(seen, missing_model="gemini-old"))
     assistant.answer(ctx, "hi", [], [LAB], client=client)
-    assert client.model == "gemini-9-flash" and seen[-1].url.path.endswith("gemini-9-flash:generateContent")
+    # newest numbered version, not alphabetical order ("9" > "10") and not the omni / latest variants
+    assert client.model == "gemini-10-flash" and seen[-1].url.path.endswith("gemini-10-flash:generateContent")
 
 
 def test_chat_endpoint_reports_gemini_errors(client, monkeypatch):

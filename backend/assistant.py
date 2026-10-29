@@ -15,6 +15,7 @@ Settings (.env): GEMINI_API_KEY (from https://aistudio.google.com), GEMINI_MODEL
 """
 import logging
 import os
+import re
 
 import httpx
 
@@ -23,7 +24,7 @@ from ml.career_needs import JOB_ZONES, requirements
 log = logging.getLogger("pathfinder.assistant")
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta"
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-3.5-flash"   # 29 Oct: gemini-2.5-flash closed to new keys; 3.7/3.8-flash timed out
 MAX_RECORDS = 8
 TIMEOUT_SECONDS = 40
 
@@ -132,8 +133,10 @@ class GeminiClient:
             return None
         models = [m["name"].split("/", 1)[-1] for m in r.json().get("models", [])
                   if "generateContent" in m.get("supportedGenerationMethods", [])]
-        skip = ("preview", "exp", "tts", "image", "live", "audio", "embedding", "thinking", "lite")
-        flash = sorted((m for m in models if "flash" in m and not any(s in m for s in skip)), reverse=True)
+        skip = ("preview", "exp", "tts", "image", "live", "audio", "embedding", "thinking", "lite", "omni")
+        flash = [m for m in models if "flash" in m and not any(s in m for s in skip)]
+        # newest numbered version first ("gemini-3.5-flash" before "gemini-2.5-flash"), "-latest" aliases last
+        flash.sort(key=lambda m: [int(n) for n in re.findall(r"\d+", m)] or [-1], reverse=True)
         return (flash or models or [None])[0]
 
     def generate(self, system, turns, temperature=0.4, max_tokens=700):
