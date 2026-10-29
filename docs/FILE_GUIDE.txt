@@ -1,0 +1,354 @@
+==========================================================================================
+ PATHFINDER - FILE GUIDE
+ What every folder and file in the project is, and how it contributes. Written 29 Oct 2026.
+==========================================================================================
+
+About 150 files are in Git (GitHub). A few more exist only on the team PC (marked [PC ONLY]); they
+are never uploaded because they are private, large, or downloaded separately.
+
+For HOW the system works (formulas, results, decisions) see docs/PROJECT_GUIDE.txt.
+This file answers: "What is this file, and why is it here?"
+
+CONTENTS
+  1.  The big picture: how the files work together
+  2.  Files at the top of the project folder
+  3.  ml/            the "brain": engines, ML model, text matching
+  4.  backend/       the server (FastAPI): website addresses, login, database access
+  5.  frontend/      the website the student sees
+  6.  config/        editable data tables (no code)
+  7.  database/      MySQL tables
+  8.  data/          O*NET, survey, generated files
+  9.  experiments/   the scripts that produce every result
+  10. docs/          guides, results, report tables
+  11. tests/         automated checks (135 tests)
+  12. notebooks/, scripts/, tools/
+  13. Files and folders you can ignore
+  14. "I want to change X - which file?"
+  15. The 12 most important files (for the viva)
+
+
+==========================================================================================
+1. THE BIG PICTURE: HOW THE FILES WORK TOGETHER
+==========================================================================================
+
+When the server starts (uvicorn backend.main:app --reload):
+
+  backend/main.py  starts the app
+     -> backend/db.py               connects to MySQL and creates/updates the tables
+                                    (database/schema.sql + database/migrations/*.sql)
+     -> ml/baseline_recommender.py  loads O*NET (from MySQL, or from data/raw/onet/ files)
+     -> ml/localise.py, config/     short titles, India rules, industries
+     -> ml/preferences.py           adds work-setting data, reads config/areas.csv, course_areas.csv
+     -> ml/field_model.py           TRAINS the Logistic Regression on data/raw/survey/responses.csv
+     -> ml/semantic.py              loads Sentence-BERT in the background (text matching)
+
+When a student takes the quiz and opens "My matches":
+
+  Browser: frontend/app/quiz.js  (the questions)
+     -> frontend/app/api.js         sends the answers to the server   (POST /assessment)
+     -> backend/main.py             checks them (backend/schemas.py), saves them (backend/repository.py)
+  Browser: frontend/app/matches.js asks for matches                    (GET /recommend)
+     -> backend/main.py -> backend/deps.py  personal_recommend()
+        -> ml/preferences.py        areas, filters, weak points, grouping
+           -> ml/field_model.py     predicts a field (if no areas picked)
+           -> ml/recommender_v3.py  scores every career (engine v3)
+              -> ml/recommender_v2.py  readiness, ranges, diversity, reasons
+                 -> ml/baseline_recommender.py  shared maths, O*NET data
+     <- the 10 careers with reasons go back to matches.js, which draws them
+
+Other pages follow the same pattern:
+  career.js   -> GET /careers/{id}, /careers/{id}/requirements, /careers/{id}/pathway
+                 (backend/main.py, backend/routes/roadmap.py -> ml/career_needs.py, ml/pathways.py)
+  roadmap.js  -> /roadmap/{id}           (backend/routes/roadmap.py -> ml/career_needs.py)
+  explore.js  -> /industries, /careers/search   (backend/routes/explore.py, backend/main.py)
+  assistant.js-> /assistant/chat          (backend/routes/assistant.py -> backend/assistant.py -> Gemini)
+  quiz text box -> /match/text            (backend/routes/assistant.py -> ml/semantic.py)
+
+Results for the report are made separately, by experiments/*.py, from O*NET + the survey file,
+and written into docs/results/. experiments/report_tables.py turns them into the report tables.
+
+
+==========================================================================================
+2. FILES AT THE TOP OF THE PROJECT FOLDER
+==========================================================================================
+
+README.md              The front page on GitHub: what the project is, how to install and run it,
+                       the main commands. Read first on a new PC.
+CLAUDE.md              Full technical context for AI assistants (and for you): rules, status table,
+                       engine specification, database tables, decisions. Most detailed document.
+requirements.txt       Python packages the app needs (pandas, scikit-learn, FastAPI, SQLAlchemy ...).
+                       Installed with: pip install -r requirements.txt
+requirements-dev.txt   requirements.txt + pytest (for running the tests).
+requirements-ml.txt    Optional extra: sentence-transformers (Sentence-BERT) for better text matching.
+.env.example           A template of the settings file, with explanations. Copy it to .env.
+.env  [PC ONLY]        Your real settings and secrets: MySQL password, JWT secret, GEMINI_API_KEY,
+                       GEMINI_MODEL. NEVER upload it (it is in .gitignore).
+.gitignore             Tells Git which files never to upload (.env, .venv, raw data, survey file ...).
+
+
+==========================================================================================
+3. ml/ - THE "BRAIN" (all recommendation logic; no website code here)
+==========================================================================================
+
+baseline_recommender.py  Engine v1 (Pearson correlation) AND the O*NET loaders used by everything:
+                         load_onet() reads the O*NET text files, load_from_mysql() reads MySQL.
+                         Also the skill/subject maps and SOC field names. Foundation of all engines.
+recommender_v2.py        Engine v2: readiness scores (do your levels meet the career's levels),
+                         score ranges for "can't assess" answers, follow-up questions, field diversity
+                         (max 2 per field in the top 5), reasons and skill gaps, target career.
+recommender_v3.py        Engine v3 = v2 + "strength fit" (are your strongest skills the ones the career
+                         relies on). THE ENGINE THE WEBSITE USES. Holds the weights 0.25 / 0.30 / 0.15.
+field_model.py           The trained ML model: Logistic Regression that predicts the career FIELD from
+                         the 22 quiz answers (+ branch). Trained in memory at server start from the
+                         survey file; never saved.
+preferences.py           Personalisation on top of v3: chosen areas, course, work-setting and
+                         further-study filters, weak-point clash rule, "Not for me", grouping into
+                         "In your areas" (7) + "Also worth a look" (3), the predicted-field path.
+semantic.py              Text matching: turns the student's own words into careers using Sentence-BERT
+                         (all-MiniLM-L6-v2), or TF-IDF if Sentence-BERT is not installed.
+career_needs.py          Every important skill/knowledge of a career, marked "You have this" /
+                         "Skills to build", and the step-by-step roadmap.
+pathways.py              "How to get there": Indian education routes (config/career_paths.csv),
+                         stream after Class 10, education shares, career ladder, courses.
+localise.py              India adaptation: short job titles, unique titles ("Professor (Biology)"),
+                         India exclusions, industries, salaries (only from cited sources).
+survey.py                Reads the Google Form CSV, turns each response into engine input and ML
+                         features; ANALYSIS_CUTOFF = 87 (first 87 responses = main results).
+__init__.py              Empty; makes ml/ a Python package so "from ml.x import y" works.
+
+
+==========================================================================================
+4. backend/ - THE SERVER (FastAPI)
+==========================================================================================
+
+main.py          Starts the app, loads all data at startup, and defines the main website
+                 addresses: /health, /auth/register, /auth/login, /me, /assessment, /recommend,
+                 /quiz/options, /feedback/... ("Not for me", ratings), /careers/search,
+                 /careers/{id}, /target/{id}. Also serves the website at /app/.
+deps.py          Shared pieces for all endpoint files: AppContext (all loaded data), the login check,
+                 which engine to use (ENGINE_VERSION), personal_recommend().
+schemas.py       The exact shape of every request and reply (Pydantic). Rejects bad input, e.g. a
+                 rating of 7, with a clear error. Also what /docs shows.
+repository.py    Saving and reading students, answers, recommendations, hidden careers, ratings.
+                 Two versions: SqlRepository (MySQL) and MemoryRepository (no MySQL / tests).
+db.py            The MySQL connection (settings from .env) and update_schema(), which runs
+                 database/schema.sql and all migrations at startup.
+security.py      Password hashing (bcrypt) and login tokens (JWT).
+assistant.py     The chatbot (RAG): finds the career records for a question, sends them with the
+                 rules to Google Gemini, returns the answer. Retries and backup models when busy;
+                 "offline" answer without a key.
+routes/explore.py    /industries, /industries/{id}: browse careers by industry.
+routes/roadmap.py    /careers/{id}/requirements, /roadmap/{id}, /roadmap/{id}/progress, /roadmaps,
+                     /careers/{id}/pathway.
+routes/assistant.py  /match/text (own words -> careers), /assistant/status, /assistant/chat.
+routes/__init__.py, __init__.py   Package markers.
+
+
+==========================================================================================
+5. frontend/ - THE WEBSITE THE STUDENT SEES (plain HTML/CSS/JavaScript, no build step)
+==========================================================================================
+
+frontend/app/  (served by the server at http://127.0.0.1:8000/app/)
+  index.html     The single page: header, menu (Quiz, My matches, Explore, Roadmap, Ask), loads
+                 all the .js files.
+  core.js        Shared helpers, the page router (#/quiz, #/matches ...), the header, toasts.
+  api.js         EVERY call to the server lives here (one function per address).
+  account.js     Sign up / log in page.
+  quiz.js        The quiz: one question per screen (areas, course, interests, skills, strongest and
+                 weakest skills, subjects, workday, place, further study, free text).
+  matches.js     "My matches": groups, reasons, "What you'd do", Not for me, 1-5 rating.
+  career.js      One career: requirements, "Skills to build" / "You have this", "How to get there".
+  roadmap.js     Step-by-step plan for a career, with ticks saved per student.
+  explore.js     Browse by industry and search any job.
+  assistant.js   The "Ask" chatbot page.
+  styles.css     All the styling (colours, layout, phone sizes).
+
+frontend/prototype/  (OLD, kept for history; not used by the website)
+  pathfinder.html  The first offline prototype (engine v1 in the browser, no server).
+  engine.js        That prototype's engine in JavaScript (same results as Python v1).
+
+
+==========================================================================================
+6. config/ - EDITABLE DATA TABLES (CSV; change them without touching code)
+==========================================================================================
+
+README.md            Explains each config file and its columns.
+areas.csv            The 17 areas a student can pick in the quiz -> O*NET career codes.
+course_areas.csv     The 18 courses -> their areas + the matching survey branch (used by the
+                     field model).
+career_paths.csv     Indian education routes (73 rows), each with verified=yes/no. All "no" until
+                     the team checks them on official sites.
+industries.csv       27 industries for the Explore page -> O*NET codes.
+india_exclusions.csv Careers not shown in India (1 rule: gambling).
+salary_india.csv     Indian salaries - EMPTY on purpose: only salaries with a cited source may go here.
+courses.csv          Learning courses - EMPTY on purpose: only checked courses may go here.
+survey_field_map.csv Survey field (Q8) -> O*NET codes. FIXED before any result; do not change.
+
+
+==========================================================================================
+7. database/ - MYSQL
+==========================================================================================
+
+schema.sql           Creates all 16 tables (13 from the ER diagram + roadmap_progress,
+                     career_feedback, career_rating). Safe to run again.
+migrations/002_answer_status.sql          "No experience / Not studied / Can't assess" answers.
+migrations/003_preferences_and_roadmap.sql  location + about-me on an assessment; roadmap_progress.
+migrations/004_profile_and_feedback.sql     the new quiz answers (profile_json); "Not for me" table.
+migrations/005_career_rating.sql            the 1-5 "Would you consider it?" ratings table.
+All migrations run automatically at server start (backend/db.py), so an old database is updated.
+
+
+==========================================================================================
+8. data/ - DATA
+==========================================================================================
+
+data/raw/onet/db_31_0_text/  [PC ONLY]  The 46 O*NET 31.0 text files (download from onetcenter.org).
+                     Only .gitkeep is in Git (it keeps the empty folder).
+data/raw/survey/responses.csv  [PC ONLY, PRIVATE]  The Google Form responses (139 rows). Never
+                     upload or share; never edit (rule: data/raw/ is read-only).
+data/processed/  [PC ONLY]  Files the code generates and can always re-create:
+  career_embeddings_*.npy   Sentence-BERT vectors of all careers (cache, makes startup faster).
+  survey_clean.csv          the tidy survey table.
+  hit_rate_per_student.csv  per-student hits (main run); later/ = the same for all 139 responses.
+data/cleaned/        Empty (.gitkeep); reserved for cleaned copies.
+
+
+==========================================================================================
+9. experiments/ - THE SCRIPTS THAT PRODUCE EVERY RESULT
+==========================================================================================
+
+Run each with: python experiments\<name>.py   (outputs go to docs/results/)
+
+On the survey (main results use the first 87 responses):
+  survey_analysis.py   Survey counts and charts (who answered, counsellor, clarity) -> problem statement.
+  survey_insights.py   Answer quality, branch vs aim, which answers separate fields (eta squared).
+  hit_rate.py          Is the student's aimed field in their top 1/3/5? Engines v1, v2, v3 vs random.
+  tune_weights.py      Tries ~200 weight sets with cross-validation (result: kept the hand weights).
+  ml_compare.py        Logistic Regression vs Random Forest vs SVM vs majority vs the engine.
+  model_features.py    Which inputs the field model should use (answers, + branch, ...).
+  hybrid.py            ML field + engine v3 (what the website does), cross-validated.
+  later_responses.py   The same evaluations on ALL 139 responses -> docs/results/survey/later/.
+  user_test.py         Summarises students' 1-5 ratings of their own matches (user test).
+
+On O*NET with synthetic students (checks of the formulas, not accuracy):
+  self_match.py           Can each method find the career a synthetic student was copied from?
+  weight_sensitivity.py   Does the top 5 change if a weight changes by 10%?
+  masking.py              What happens when answers are "can't assess"?
+  summarise.py            Writes docs/results/summary.md from those three.
+  common.py               Shared helpers for these three.
+
+Report:
+  report_tables.py     Builds docs/report/results_tables.md from all results files (no number
+                       typed by hand). Run it after any experiment.
+
+
+==========================================================================================
+10. docs/ - GUIDES, RESULTS, REPORT TABLES
+==========================================================================================
+
+PROJECT_GUIDE.txt      The complete explanation of the project (give this to any AI assistant).
+FILE_GUIDE.txt         This file.
+demo_and_viva.md       5-minute demo script, numbers to remember, hard viva questions.
+user_test_protocol.md  How to run the user test with students.
+onet_inventory.csv     List of all 46 O*NET files with rows and columns (from scripts/inventory_onet.py).
+report/results_tables.md  ALL tables for the report, generated. Copy them into the report as they are.
+
+docs/results/  (O*NET checks with synthetic students)
+  self_match.csv, self_match_summary.csv, weight_sensitivity.csv, masking.csv  raw results
+  summary.md     the readable summary;  README.md  what each experiment tests + limitations
+
+docs/results/survey/  (survey results, first 87 responses; totals only, no personal answers)
+  README.md                 how to run + what each file means + limitations
+  survey_summary.md, *.png  survey counts and charts (year, branch, clarity, counsellor, aim, would use)
+  insights.md, insights_by_field.csv, insights_eta.csv, insights_heatmap.png   survey study
+  hit_rate.csv, hit_rate_by_field.csv, hit_rate_counts.txt   Hit@k results
+  hybrid.csv                hybrid results
+  ml_compare.csv, ml_counts.txt, ml_feature_importance.csv, ml_confusion_*.png   ML comparison
+  model_features.csv        feature-set comparison
+  tune_weights.csv, tuned_weights.json   weight tuning
+  later/                    the same evaluations on all 139 responses + batches.csv/txt
+                            (first 87 vs the 52 later ones)
+
+
+==========================================================================================
+11. tests/ - AUTOMATED CHECKS (run: pytest -q -rs ; 135 tests)
+==========================================================================================
+
+All tests use small FAKE data (tests/fake_onet.py, synthetic survey rows), never real students.
+
+conftest.py, fake_onet.py      shared setup and a tiny fake O*NET folder
+test_baseline_recommender.py   engine v1
+test_recommender_v2.py         engine v2 rules (ranges, readiness, diversity ...)
+test_recommender_v3.py         engine v3 strength fit
+test_preferences.py            areas, filters, weak points, "Not for me", grouping
+test_field_model.py            the field model and the predicted-field path
+test_features.py               titles, India filter, industries, requirements, roadmap, routes
+test_assistant.py              text matching and the chatbot (Gemini is faked; busy/backup cases)
+test_api.py                    every server address, login, saving, errors
+test_mysql_matches_files.py    MySQL gives exactly the same results as the files (skipped without MySQL)
+test_survey.py                 survey reader, cut-off, survey experiments
+test_experiments.py            the O*NET check scripts run end to end
+test_user_test.py              user-test summary;  test_report_tables.py  report table builder
+
+
+==========================================================================================
+12. notebooks/, scripts/, tools/
+==========================================================================================
+
+notebooks/01_explore_onet.ipynb     First look at the O*NET data (early project stage).
+notebooks/02_baseline_demo.ipynb    Engine v1 on two hand-made profiles.
+notebooks/03_engine_v2_demo.ipynb   Engine v1 vs v2 on hand-made profiles.
+  (Jupyter notebooks; history and demos, not used by the website.)
+scripts/load_onet_to_mysql.py  Copies O*NET into MySQL (run once on a new PC; safe to re-run).
+scripts/inventory_onet.py      Lists all O*NET files and columns -> docs/onet_inventory.csv.
+tools/create_career_survey.gs  Google Apps Script that created the 9-question Google Form.
+
+
+==========================================================================================
+13. FILES AND FOLDERS YOU CAN IGNORE (created automatically, never edit)
+==========================================================================================
+
+.venv/            The Python environment with all installed packages (re-create with pip).
+.git/             Git's own history database.
+__pycache__/      Python's compiled-file cache (in every code folder).
+.pytest_cache/    pytest's cache.
+*.pyc             Compiled Python files.
+
+
+==========================================================================================
+14. "I WANT TO CHANGE X - WHICH FILE?"
+==========================================================================================
+
+Quiz question wording / order            frontend/app/quiz.js
+How the matches page looks               frontend/app/matches.js, styles.css
+Colours / layout                         frontend/app/styles.css
+Engine weights                           ml/recommender_v3.py (HAND_WEIGHTS) - but they were fixed
+                                         before testing; changing them changes every result
+Areas a student can pick                 config/areas.csv
+Courses and their areas                  config/course_areas.csv
+Education routes / mark one as checked   config/career_paths.csv (verified=yes)
+Show only checked routes                 .env  SHOW_UNVERIFIED_ROUTES=no
+Chatbot rules or model                   backend/assistant.py (SYSTEM_PROMPT), .env GEMINI_MODEL
+Switch the field model off               .env  USE_FIELD_MODEL=no
+Add a new server address                 backend/main.py or backend/routes/*.py + backend/schemas.py
+                                         + frontend/app/api.js
+Add a database column                    a new database/migrations/006_....sql + database/schema.sql
+Report tables                            run experiments\report_tables.py (never edit the .md by hand)
+
+
+==========================================================================================
+15. THE 12 MOST IMPORTANT FILES (know these for the viva)
+==========================================================================================
+
+  1. ml/recommender_v3.py       the engine the website uses
+  2. ml/recommender_v2.py       readiness, ranges, reasons (v3 builds on it)
+  3. ml/field_model.py          the trained ML model
+  4. ml/preferences.py          personalisation and the hybrid in the app
+  5. ml/semantic.py             Sentence-BERT text matching
+  6. backend/assistant.py       the RAG chatbot
+  7. backend/main.py            the server and its addresses
+  8. frontend/app/quiz.js       what the student answers
+  9. experiments/hybrid.py      the main result (66.4% / 71.4%)
+ 10. experiments/ml_compare.py  why Logistic Regression
+ 11. docs/report/results_tables.md  every number for the report
+ 12. database/schema.sql        the 16 MySQL tables

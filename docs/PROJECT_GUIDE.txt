@@ -580,7 +580,8 @@ scripts/load_onet_to_mysql.py, inventory_onet.py
 config/                    editable data files (Section 19)
 notebooks/01-03            data exploration, v1 demo, v2 demo
 tools/create_career_survey.gs   builds the Google Form
-docs/                      results/, report/results_tables.md, user_test_protocol.md, this guide
+docs/                      results/, report/results_tables.md, user_test_protocol.md, this guide,
+                           FILE_GUIDE.txt (every file explained), demo_and_viva.md
 CLAUDE.md                  full technical context and status; README.md  setup and run
 
 
