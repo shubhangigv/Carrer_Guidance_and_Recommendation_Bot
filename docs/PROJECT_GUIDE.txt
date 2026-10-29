@@ -82,7 +82,7 @@ MAIN RESULT (survey, 81 students who named the field they aim for, cross-validat
   and in the TOP 5 for 71.4%. Random picking: 9.0% and 36.2%. Engine alone: 14.8% and 35.8%.
 
 TECH: Python 3.13, pandas, NumPy, scikit-learn, sentence-transformers, FastAPI, MySQL (SQLAlchemy +
-PyMySQL), plain HTML/CSS/JavaScript frontend, Google Gemini API, pytest (135 tests), Git/GitHub.
+PyMySQL), plain HTML/CSS/JavaScript frontend, Google Gemini API, pytest (139 tests), Git/GitHub.
 
 
 ==========================================================================================
@@ -468,7 +468,7 @@ F) Checks on O*NET with synthetic students (NOT accuracy; docs/results/summary.m
 G) User test (experiments/user_test.py, docs/user_test_protocol.md): students rate each of their
    matches 1-5 ("Would you consider it?"). Built into the website. NOT RUN YET.
 
-H) Smoke test: all 26 endpoints on the real O*NET data passed (28 Oct); 135 automated tests pass.
+H) Smoke test: all 26 endpoints on the real O*NET data passed (28 Oct); 139 automated tests pass.
 
 I) Responses after the cut-off (experiments/later_responses.py -> docs/results/survey/later/).
    The main results above use the first 87 rows (ANALYSIS_CUTOFF in ml/survey.py; every survey
@@ -575,7 +575,7 @@ frontend/app/              the website (Section 12); frontend/prototype/ = old o
 database/schema.sql, migrations/002-005.sql
 experiments/               every experiment (Section 14) + report_tables.py + user_test.py
                            + later_responses.py (all responses, incl. after the cut-off)
-tests/                     135 tests (pytest); fake_onet.py = tiny fake O*NET for tests
+tests/                     139 tests (pytest); fake_onet.py = tiny fake O*NET for tests
 scripts/load_onet_to_mysql.py, inventory_onet.py
 config/                    editable data files (Section 19)
 notebooks/01-03            data exploration, v1 demo, v2 demo
@@ -647,7 +647,9 @@ Report tables:     python experiments\report_tables.py
   - Chatbot says offline: no GEMINI_API_KEY in .env (or no internet).
   - Chatbot "Gemini error 503 / very busy": Google's servers are overloaded. The app retries and then
     uses backup models (gemini-3.5-flash-lite, gemini-3.1-flash-lite; GEMINI_BACKUP_MODELS in .env);
-    if all are busy, wait a minute. gemini-2.5-flash no longer works for new keys (29 Oct).
+    gemini-2.5-flash no longer works for new keys (29 Oct). If everything fails (busy, wrong key, no
+    internet), the chat never shows an error: it answers with the matching careers from our own
+    data and says why (gives up after 45 seconds).
   - No "Suggested field" on matches: no survey file on that PC, or USE_FIELD_MODEL=no, or the student
     picked areas (their choice wins).
   - Old results in the browser: press Ctrl+F5, or "Change my answers" -> "See my matches".
@@ -680,7 +682,7 @@ DONE
   [x] dev merged into main on GitHub (29 Oct)
   [x] Demo script and viva sheet: docs/demo_and_viva.md
   [x] All experiments run; report tables generated; O*NET checks run
-  [x] 135 tests pass; 26 endpoints smoke-tested on real data
+  [x] 139 tests pass; 26 endpoints smoke-tested on real data
   [x] README, CLAUDE.md, user-test guide, this guide; everything on GitHub (dev)
 
 LEFT

@@ -31,6 +31,7 @@ DEFAULT_MODEL = "gemini-3.5-flash"   # 29 Oct: gemini-2.5-flash closed to new ke
 BACKUP_MODELS = ("gemini-3.5-flash-lite", "gemini-3.1-flash-lite")
 BUSY_CODES = (429, 500, 502, 503, 504)
 RETRY_WAIT_SECONDS = 1.5
+MAX_WAIT_SECONDS = 45          # after this, stop trying and answer from our own data (routes/assistant.py)
 MAX_RECORDS = 8
 TIMEOUT_SECONDS = 25
 
@@ -111,13 +112,17 @@ def find_careers(ctx, message, matcher=None, extra_codes=(), n=MAX_RECORDS):
     return out[:n]
 
 
-def offline_reply(ctx, codes):
+NO_KEY = "The AI assistant is not switched on (no GEMINI_API_KEY in .env)."
+
+
+def offline_reply(ctx, codes, reason=NO_KEY):
+    """Answer without Gemini: the careers in our data that match the message. Also used when Gemini fails,
+    so the chat never ends in an error."""
     if not codes:
-        return ("The AI assistant is not switched on (no GEMINI_API_KEY in .env), and I could not find a "
-                "career matching your words. Try the Explore page or Search with a job name.")
+        return f"{reason}\nI could not find a career matching your words. Try the Explore page or Search with a job name."
     names = "\n".join(f"- {ctx.display_title(c)}" for c in codes[:5])
-    return ("The AI assistant is not switched on (no GEMINI_API_KEY in .env), so here are the careers in our "
-            f"database that match your message:\n{names}\nOpen one from Search to see its skills and roadmap.")
+    return (f"{reason}\nHere are the careers in our database that match your message:\n{names}\n"
+            "Open one to see its skills and roadmap.")
 
 
 class GeminiError(Exception):
@@ -163,6 +168,7 @@ class GeminiClient:
                 "contents": [{"role": "model" if t["role"] == "assistant" else "user", "parts": [{"text": t["text"]}]}
                              for t in turns],
                 "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens}}
+        start = time.monotonic()
         r = self._post_busy_safe(self.model, body)
         if r is not None and r.status_code == 404:   # model retired or renamed
             better = self._pick_available_model()
@@ -172,7 +178,11 @@ class GeminiClient:
                 r = self._post_busy_safe(self.model, body)
         if r is None or r.status_code in BUSY_CODES:   # busy: try once more, then the smaller backup models
             time.sleep(RETRY_WAIT_SECONDS)
-            for model in [self.model] + [m for m in backup_models() if m != self.model]:
+            again = [self.model] if r is not None else []    # a model that timed out is not asked again
+            for model in again + [m for m in backup_models() if m != self.model]:
+                if time.monotonic() - start > MAX_WAIT_SECONDS:
+                    log.warning("Gemini: gave up after %d seconds", MAX_WAIT_SECONDS)
+                    break
                 r = self._post_busy_safe(model, body)
                 if r is not None and r.status_code not in BUSY_CODES:
                     if model != self.model:

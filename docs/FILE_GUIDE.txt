@@ -20,7 +20,7 @@ CONTENTS
   8.  data/          O*NET, survey, generated files
   9.  experiments/   the scripts that produce every result
   10. docs/          guides, results, report tables
-  11. tests/         automated checks (135 tests)
+  11. tests/         automated checks (139 tests)
   12. notebooks/, scripts/, tools/
   13. Files and folders you can ignore
   14. "I want to change X - which file?"
@@ -136,7 +136,7 @@ db.py            The MySQL connection (settings from .env) and update_schema(), 
 security.py      Password hashing (bcrypt) and login tokens (JWT).
 assistant.py     The chatbot (RAG): finds the career records for a question, sends them with the
                  rules to Google Gemini, returns the answer. Retries and backup models when busy;
-                 "offline" answer without a key.
+                 if Gemini still fails, answers with matching careers from our data (never an error).
 routes/explore.py    /industries, /industries/{id}: browse careers by industry.
 routes/roadmap.py    /careers/{id}/requirements, /roadmap/{id}, /roadmap/{id}/progress, /roadmaps,
                      /careers/{id}/pathway.
@@ -271,7 +271,7 @@ docs/results/survey/  (survey results, first 87 responses; totals only, no perso
 
 
 ==========================================================================================
-11. tests/ - AUTOMATED CHECKS (run: pytest -q -rs ; 135 tests)
+11. tests/ - AUTOMATED CHECKS (run: pytest -q -rs ; 139 tests)
 ==========================================================================================
 
 All tests use small FAKE data (tests/fake_onet.py, synthetic survey rows), never real students.

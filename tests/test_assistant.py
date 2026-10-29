@@ -133,7 +133,29 @@ def test_chat_endpoint_reports_gemini_errors(client, monkeypatch):
     monkeypatch.setattr(assistant, "GeminiClient",
                         lambda key: real(key, "m", httpx.Client(transport=httpx.MockTransport(refuse))))
     r = client.post("/assistant/chat", json={"message": "hello"})
-    assert r.status_code == 502 and "GEMINI_API_KEY" in r.json()["detail"]
+    # never an error page: the reason first, then the careers from our own data
+    assert r.status_code == 200 and r.json()["mode"] == "offline" and "GEMINI_API_KEY" in r.json()["reply"]
+
+
+def test_chat_endpoint_answers_from_our_data_when_gemini_is_busy(client, monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    monkeypatch.setattr(assistant, "RETRY_WAIT_SECONDS", 0)
+    real = assistant.GeminiClient
+    monkeypatch.setattr(assistant, "GeminiClient",
+                        lambda key: real(key, "m", busy_mock([], ["m", *assistant.BACKUP_MODELS])))
+    r = client.post("/assistant/chat", json={"message": "I want to work in a laboratory doing research"})
+    body = r.json()
+    assert r.status_code == 200 and body["mode"] == "offline"
+    assert "very busy" in body["reply"] and "Here are the careers" in body["reply"]
+
+
+def test_chat_endpoint_survives_unexpected_errors(client, monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    def crash(*args, **kwargs):
+        raise RuntimeError("network down")
+    monkeypatch.setattr(assistant, "answer", crash)
+    r = client.post("/assistant/chat", json={"message": "hello"})
+    assert r.status_code == 200 and r.json()["mode"] == "offline" and "could not be reached" in r.json()["reply"]
 
 
 def busy_mock(seen, busy_models):

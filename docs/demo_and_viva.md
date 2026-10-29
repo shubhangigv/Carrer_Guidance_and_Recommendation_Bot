@@ -46,7 +46,7 @@ If something fails: stay calm and say what it would show. You can also open `/do
 | Other models | SVM 58.4% / 0.412; Random Forest 57.7% / 0.383 |
 | Survey study | Interests barely differ between fields (eta squared 0.01-0.04); Programming 0.52, Computer Science 0.41 |
 | All 139 responses | 10 fields instead of 5, so lower: hybrid + branch 48.6% / 55.5%, random 8.4% / 34.4% |
-| Tests | 135 automated tests pass |
+| Tests | 139 automated tests pass |
 
 ## Hard questions, short answers
 
