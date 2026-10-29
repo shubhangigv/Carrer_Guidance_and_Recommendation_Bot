@@ -79,6 +79,7 @@ python experiments\tune_weights.py              # cross-validated weight tuning
 python experiments\ml_compare.py                # ML models vs the engine
 python experiments\model_features.py            # which answers the field model should use
 python experiments\hybrid.py                    # ML field + engine, cross-validated
+python experiments\later_responses.py           # the same on ALL responses (the ones above use the first 87)
 python experiments\user_test.py --since 2026-10-22 --exclude-emails team@x.com   # after the user test
 python experiments\report_tables.py             # rebuild docs/report/results_tables.md
 ```

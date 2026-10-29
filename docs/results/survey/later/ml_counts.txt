@@ -1,0 +1,6 @@
+students_used=130
+fields=10
+folds=3
+repeats=5
+left_out_small_fields={'Agriculture & Environment': np.int64(2)}
+field_counts={'IT & Computing': np.int64(36), 'Engineering': np.int64(26), 'Healthcare & Medicine': np.int64(25), 'Business & Finance': np.int64(13), 'Management': np.int64(9), 'Life & Physical Sciences': np.int64(5), 'Law & Public Service': np.int64(5), 'Arts, Design & Media': np.int64(4), 'Education': np.int64(4), 'Social Work & Psychology': np.int64(3)}

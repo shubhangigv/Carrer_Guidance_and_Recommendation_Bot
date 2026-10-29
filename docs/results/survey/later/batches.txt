@@ -1,0 +1,8 @@
+cutoff=87
+responses_total=139
+first_responses=87
+first_flat_skill_pct=5.7
+first_aimed_field={'IT & Computing': 27, 'Engineering': 21, 'Healthcare & Medicine': 21, 'Not sure yet': 6, 'Business & Finance': 5, 'Arts, Design & Media': 3, 'Agriculture & Environment': 1, 'Education': 1, 'Management': 1, 'Social Work & Psychology': 1}
+later_responses=52
+later_flat_skill_pct=15.4
+later_aimed_field={'IT & Computing': 9, 'Management': 8, 'Business & Finance': 8, 'Engineering': 5, 'Life & Physical Sciences': 5, 'Law & Public Service': 5, 'Healthcare & Medicine': 4, 'Education': 3, 'Social Work & Psychology': 2, 'Arts, Design & Media': 1, 'Agriculture & Environment': 1, 'Not sure yet': 1}

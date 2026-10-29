@@ -38,7 +38,7 @@ from ml.field_model import logreg_pipeline  # noqa: E402
 from ml.localise import apply_local_rules  # noqa: E402
 from ml.recommender_v2 import load_onet_v2, recommend_v2  # noqa: E402
 from ml.recommender_v3 import HAND_FIT_SHARE, HAND_WEIGHTS, recommend_v3  # noqa: E402
-from ml.survey import (DEFAULT_SURVEY, NOT_SURE, feature_table, field_of_code, is_complete,  # noqa: E402
+from ml.survey import (DEFAULT_SURVEY, ANALYSIS_CUTOFF, NOT_SURE, feature_table, field_of_code, is_complete,  # noqa: E402
                        load_field_map, load_survey, to_student)
 
 ONET_DIR = ROOT / "data" / "raw" / "onet"
@@ -158,13 +158,15 @@ def feature_importance(X, y):
 def main(argv=None):
     p = argparse.ArgumentParser(description="ML vs engine on the survey")
     p.add_argument("--survey", type=Path, default=DEFAULT_SURVEY)
+    p.add_argument("--first-n", type=int, default=ANALYSIS_CUTOFF,
+                   help="use only the first N responses (default: the analysis cut-off; 0 = all)")
     p.add_argument("--onet-dir", type=Path, default=ONET_DIR)
     p.add_argument("--out", type=Path, default=OUT_DIR)
     p.add_argument("--min-class", type=int, default=3, help="leave out fields with fewer students than this")
     p.add_argument("--no-engine", action="store_true", help="skip the engine comparison (no O*NET needed)")
     args = p.parse_args(argv)
 
-    tidy = load_survey(args.survey)
+    tidy = load_survey(args.survey, first_n=args.first_n or None)
     field_map = load_field_map()
     keep = (~tidy["aimed_field"].eq(NOT_SURE)) & tidy["aimed_field"].isin(field_map) & tidy.apply(is_complete, axis=1)
     tidy = tidy[keep]

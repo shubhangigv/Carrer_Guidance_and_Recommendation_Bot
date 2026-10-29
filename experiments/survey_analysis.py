@@ -15,7 +15,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from ml.survey import DEFAULT_SURVEY, load_survey  # noqa: E402
+from ml.survey import DEFAULT_SURVEY, ANALYSIS_CUTOFF, load_survey  # noqa: E402
 
 OUT_DIR = ROOT / "docs" / "results" / "survey"
 CLEAN_FILE = ROOT / "data" / "processed" / "survey_clean.csv"
@@ -54,12 +54,14 @@ def chart(df, title, path):
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--survey", type=Path, default=DEFAULT_SURVEY)
+    p.add_argument("--first-n", type=int, default=ANALYSIS_CUTOFF,
+                   help="use only the first N responses (default: the analysis cut-off; 0 = all)")
     p.add_argument("--out", type=Path, default=OUT_DIR)
     p.add_argument("--no-charts", action="store_true")
     p.add_argument("--clean-out", type=Path, default=CLEAN_FILE, help="where the tidy copy is written")
     args = p.parse_args(argv)
 
-    tidy = load_survey(args.survey)
+    tidy = load_survey(args.survey, first_n=args.first_n or None)
     args.clean_out.parent.mkdir(parents=True, exist_ok=True)
     tidy.to_csv(args.clean_out, index=False)
     args.out.mkdir(parents=True, exist_ok=True)

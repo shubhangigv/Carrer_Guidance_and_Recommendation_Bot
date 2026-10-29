@@ -34,7 +34,7 @@ sys.path.insert(0, str(ROOT))
 from ml.localise import apply_local_rules  # noqa: E402
 from ml.recommender_v2 import diversify, eligible_codes, field_of, load_onet_v2  # noqa: E402
 from ml.recommender_v3 import score_all_v3  # noqa: E402
-from ml.survey import DEFAULT_SURVEY, in_field, is_complete, load_field_map, load_survey, to_student  # noqa: E402
+from ml.survey import DEFAULT_SURVEY, ANALYSIS_CUTOFF, in_field, is_complete, load_field_map, load_survey, to_student  # noqa: E402
 
 ONET_DIR = ROOT / "data" / "raw" / "onet"
 OUT_DIR = ROOT / "docs" / "results" / "survey"
@@ -91,13 +91,15 @@ def best(hits, idx):
 def main(argv=None):
     p = argparse.ArgumentParser(description="Cross-validated weights for engine v3")
     p.add_argument("--survey", type=Path, default=DEFAULT_SURVEY)
+    p.add_argument("--first-n", type=int, default=ANALYSIS_CUTOFF,
+                   help="use only the first N responses (default: the analysis cut-off; 0 = all)")
     p.add_argument("--onet-dir", type=Path, default=ONET_DIR)
     p.add_argument("--out", type=Path, default=OUT_DIR)
     p.add_argument("--repeats", type=int, default=5)
     args = p.parse_args(argv)
 
     field_map = load_field_map()
-    tidy = load_survey(args.survey)
+    tidy = load_survey(args.survey, first_n=args.first_n or None)
     tidy = tidy[tidy["aimed_field"].isin(field_map) & tidy.apply(is_complete, axis=1)].reset_index(drop=True)
     print(f"{len(tidy)} students with an aimed field")
     data = apply_local_rules(load_onet_v2(args.onet_dir), args.onet_dir)

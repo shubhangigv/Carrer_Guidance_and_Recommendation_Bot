@@ -24,7 +24,7 @@ give Windows PowerShell commands, and say how to run and verify it.
 - Do not use gender, religion, caste or other sensitive attributes as recommendation inputs.
 - Keep the architecture below unless the team agrees to change it.
 
-## Status (updated 28 Oct 2026)
+## Status (updated 29 Oct 2026)
 
 | Part | Status |
 |---|---|
@@ -47,9 +47,10 @@ give Windows PowerShell commands, and say how to run and verify it.
 | Survey study (`experiments/survey_insights.py` -> `insights.md`, 87 responses): interests barely differ by aimed field (eta^2 0.01-0.04); Programming 0.52, Computer Science 0.41, Biology 0.28; 48 aim at their branch's field; 4.6% flat skill answers; 47.9% of answers are 4-5 | DONE (26 Oct) |
 | Hybrid (`experiments/hybrid.py`): logreg predicts the field (cross-validated), engine v3 hand weights fills the top 3 from it, rest normal. Held-out Hit@1/3/5 on 81 students: answers only 57.0%/57.0%/66.2%; answers + branch 66.4%/66.4%/71.4%; v3 alone 14.8%/29.6%/35.8%; random 9.0%/24.1%/36.2%. N_FROM_FIELD=3 fixed before the run | DONE (26 Oct) |
 | Feature sets (`experiments/model_features.py`, same folds, 77 students): answers22 60.5% acc / 0.527 F1; +branch 69.6% / 0.636; skills+subjects 58.7% / 0.464; branch only 53.0% / 0.391. Rule fixed in advance: switch only if better on both -> +branch | DONE (26 Oct) |
-| Field model in the app (`ml/field_model.py`): trained in memory at server start from responses.csv on that PC (never saved or committed; `USE_FIELD_MODEL` in .env). Used when the student picks no areas; with a course it uses answers + branch (`survey_branch` column in config/course_areas.csv). Without the file: course -> areas rule | DONE. NOTE 28 Oct: Shubhangi's PC still has the 75-response file; replace it with the final 87-response export so the app trains on all |
+| Field model in the app (`ml/field_model.py`): trained in memory at server start from responses.csv on that PC (never saved or committed; `USE_FIELD_MODEL` in .env). Used when the student picks no areas; with a course it uses answers + branch (`survey_branch` column in config/course_areas.csv). Without the file: course -> areas rule | DONE. Trains on ALL responses (29 Oct: 139 -> 130 students in 10 fields; Agriculture left out with 2) |
+| Later responses (`experiments/later_responses.py` -> `docs/results/survey/later/`): same evaluations on all 139 (132 with a field), nothing re-tuned. v3 Hit@1/@5 9.8%/31.8% vs random 8.4%/34.4%; hybrid + branch 48.6%/55.5%; ML on 130 students in 10 fields: logreg 40.3% / 0.255, forest 41.7% / 0.266, majority 27.7%. Later 52 alone: v3 Hit@1 2.0% (first 87: 14.8%); 15.4% flat skill answers vs 5.7%. Report: 87 stays the main result, this is a separate section | DONE (29 Oct) |
 | React version, `engine.js` v2 for the offline prototype | NOT planned |
-| Survey | CLOSED: 87 responses (62% 4th year, 61% engineering); all survey scripts re-run on them 26 Oct by tanisha (branch survey-87-results, merged into dev 28 Oct) |
+| Survey | CLOSED for analysis at 87 responses (62% 4th year, 61% engineering); all survey scripts re-run on them 26 Oct by tanisha (branch survey-87-results, merged into dev 28 Oct). The main results use the first 87 rows (`ANALYSIS_CUTOFF` in `ml/survey.py`, scripts take `--first-n 0` for all). 52 more arrived later (139 on 29 Oct) |
 | Survey scripts: `ml/survey.py`, `experiments/survey_analysis.py`, `hit_rate.py`, `ml_compare.py` (docs/results/survey/README.md) | DONE, run on the final 87 responses (raw file stays on the team PCs; only totals are committed) |
 
 ## Plan to the deadline (whole project finished by 31 Oct 2026)

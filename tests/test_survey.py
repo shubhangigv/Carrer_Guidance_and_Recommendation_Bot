@@ -194,3 +194,23 @@ def test_model_features_compares_the_same_folds(survey_csv, tmp_path):
     assert list(table["features"]) == ["answers22", "answers22+branch", "skills+subjects", "branch_only"]
     assert not table.set_index("features").loc["answers22", "beats_answers22_on_both"]
     assert table[["accuracy_mean", "macro_f1_mean"]].stack().between(0, 1).all()
+
+
+def test_load_survey_first_n_keeps_the_earliest_responses(survey_csv):
+    full = load_survey(survey_csv)
+    first = load_survey(survey_csv, first_n=10)
+    assert len(first) == 10 and first["response_id"].tolist() == list(range(1, 11))
+    assert first.astype(str).equals(full.head(10).astype(str))
+    assert len(load_survey(survey_csv, first_n=None)) == len(full)
+
+
+def test_later_responses_split_by_cutoff(survey_csv):
+    import later_responses
+    tidy = load_survey(survey_csv)
+    per_student = pd.DataFrame({"response_id": [1, 2, 3, 4], "method": "v3",
+                                "hit@1": [1, 0, 0, 0], "hit@3": [1, 1, 0, 0], "hit@5": [1, 1, 1, 0]})
+    table = later_responses.batch_table(per_student, cutoff=2).set_index("batch")
+    assert table.loc["first 2", "students"] == 2 and table.loc["first 2", "hit@1"] == 0.5
+    assert table.loc["later", "hit@5"] == 0.5
+    text = later_responses.batch_counts(tidy, cutoff=20)
+    assert "first_responses=20" in text and f"later_responses={len(tidy) - 20}" in text

@@ -139,6 +139,47 @@ def survey_study(r):
             "Share of an answer's variation explained by the aimed field (0 = none). Describes this sample; not a test.")
 
 
+def later_responses(r):
+    later = RES / "survey" / "later"
+    hit, hyb, ml, bat = (read(later / f) for f in ("hit_rate.csv", "hybrid.csv", "ml_compare.csv", "batches.csv"))
+    if hit is None or bat is None:
+        return r.missing("Later responses", "run experiments/later_responses.py (only if responses came in after the cut-off)")
+    kv = {}
+    if (later / "batches.txt").exists():
+        kv = dict(l.split("=", 1) for l in (later / "batches.txt").read_text(encoding="utf-8").splitlines() if "=" in l)
+    total, cutoff = kv.get("responses_total", "?"), kv.get("cutoff", "?")
+    names = {"random": "Random choice (expected)", "v1": "Engine v1", "v2": "Engine v2", "v3": "Engine v3",
+             "hybrid": "Hybrid (22 answers)", "hybrid_branch": "Hybrid (answers + branch)"}
+    rows = []
+    for df in [hit[hit["method"].isin(["random", "v1", "v2", "v3"])]] + ([hyb[hyb["method"].str.startswith("hybrid")]]
+                                                                          if hyb is not None else []):
+        for method, g in df.groupby("method", sort=False):
+            g = g.set_index("k")
+            rows.append({"Method": names.get(method, method), "Students": int(g["students"].iloc[0]),
+                         **{f"Hit@{k}": pct(g.at[k, "hit_rate"]) for k in (1, 3, 5)}})
+    r.table(f"Hit Rate@k on all {total} responses (incl. those after the cut-off of {cutoff})", pd.DataFrame(rows),
+            "Same scripts, settings and decision rules as the main results; nothing re-tuned. Reported because these "
+            "responses exist, not to replace the main results.")
+    b = bat.copy()
+    b["Method"] = b["method"].map(lambda m: names.get(m, m))
+    r.table(f"Engine Hit@k: the first {cutoff} responses vs the later ones (same run, split afterwards)",
+            pd.DataFrame({"Method": b["Method"], "Responses": b["batch"], "Students": b["students"],
+                          **{f"Hit@{k}": b[f"hit@{k}"].map(pct) for k in (1, 3, 5)}}),
+            f"Flat skill answers (all skill rows the same): first {kv.get('first_flat_skill_pct', '?')}%, "
+            f"later {kv.get('later_flat_skill_pct', '?')}%. The later responses lean towards fields the engine "
+            "matches poorly (see the field counts in later/batches.txt).")
+    if ml is not None:
+        names_ml = {"majority": "Always the most common field", "logreg": "Logistic Regression", "forest": "Random Forest",
+                    "svm": "SVM (RBF)", "engine_v2": "Engine v2 top-1 field", "engine_v3": "Engine v3 top-1 field"}
+        counts = later / "ml_counts.txt"
+        ck = dict(l.split("=", 1) for l in counts.read_text(encoding="utf-8").splitlines() if "=" in l) if counts.exists() else {}
+        r.table(f"Predicting the aimed field on all {total} responses", pd.DataFrame({
+            "Model": ml["model"].map(lambda m: names_ml.get(m, m)), "Accuracy": ml["accuracy_mean"].map(pct),
+            "Macro-F1": ml["macro_f1_mean"].round(3)}),
+            f"{ck.get('students_used', '?')} students in {ck.get('fields', '?')} fields (the main results have 5), so "
+            "the task is harder and the numbers are not comparable with the main table.")
+
+
 def phase_b(r):
     sm, ws, mk = read(RES / "self_match_summary.csv"), read(RES / "weight_sensitivity.csv"), read(RES / "masking.csv")
     if sm is not None:
@@ -190,6 +231,8 @@ def main(argv=None):
     ml_vs_engine(r)
     features(r)
     survey_study(r)
+    r.parts += ["## 2b. Responses after the analysis cut-off", ""]
+    later_responses(r)
     r.parts += ["## 3. Checks of the scoring formulas (O*NET, synthetic students)", ""]
     phase_b(r)
     r.parts += ["## 4. User test", ""]

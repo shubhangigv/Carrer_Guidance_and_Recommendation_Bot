@@ -38,7 +38,7 @@ from ml.field_model import branch_columns  # noqa: E402
 from ml.localise import apply_local_rules  # noqa: E402
 from ml.recommender_v2 import diversify, eligible_codes, field_of, load_onet_v2, rank_order  # noqa: E402
 from ml.recommender_v3 import HAND_FIT_SHARE, HAND_WEIGHTS, score_all_v3  # noqa: E402
-from ml.survey import (DEFAULT_SURVEY, feature_table, in_field, is_complete, load_field_map,  # noqa: E402
+from ml.survey import (DEFAULT_SURVEY, ANALYSIS_CUTOFF, feature_table, in_field, is_complete, load_field_map,  # noqa: E402
                        load_survey, to_student)
 
 ONET_DIR = ROOT / "data" / "raw" / "onet"
@@ -125,13 +125,15 @@ def summarise(per, tidy, field_map, pool):
 def main(argv=None):
     p = argparse.ArgumentParser(description="Hybrid ML field + engine v3 ranking, cross-validated")
     p.add_argument("--survey", type=Path, default=DEFAULT_SURVEY)
+    p.add_argument("--first-n", type=int, default=ANALYSIS_CUTOFF,
+                   help="use only the first N responses (default: the analysis cut-off; 0 = all)")
     p.add_argument("--onet-dir", type=Path, default=ONET_DIR)
     p.add_argument("--out", type=Path, default=OUT_DIR)
     p.add_argument("--repeats", type=int, default=REPEATS)
     args = p.parse_args(argv)
 
     field_map = load_field_map()
-    tidy = load_survey(args.survey)
+    tidy = load_survey(args.survey, first_n=args.first_n or None)
     tidy = tidy[tidy["aimed_field"].isin(field_map) & tidy.apply(is_complete, axis=1)].reset_index(drop=True)
     print(f"{len(tidy)} students with an aimed field")
     data = apply_local_rules(load_onet_v2(args.onet_dir), args.onet_dir)

@@ -24,6 +24,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SURVEY = PROJECT_ROOT / "data" / "raw" / "survey" / "responses.csv"
 FIELD_MAP_FILE = PROJECT_ROOT / "config" / "survey_field_map.csv"
 NOT_SURE = "Not sure yet"
+# The survey was closed for analysis at 87 responses (26 Oct), before any result on later ones was seen.
+# The report's main results use these first 87 rows (the export is in submission order); responses that came
+# in later are reported separately by experiments/later_responses.py. The app's field model uses all rows.
+ANALYSIS_CUTOFF = 87
 
 # Question 5 rows (in form order) -> RIASEC type
 INTEREST_ROWS = {
@@ -77,10 +81,13 @@ def parse_cell(value, kind):
     raise ValueError(f"Unknown {kind} answer {value!r}")
 
 
-def load_survey(path=DEFAULT_SURVEY):
+def load_survey(path=DEFAULT_SURVEY, first_n=None):
     """Tidy table: one row per response, columns year, branch, clarity, counsellor, aimed_field, would_use,
-    the 6 RIASEC interests (1-5), skill:<row> and subject:<row> answers."""
+    the 6 RIASEC interests (1-5), skill:<row> and subject:<row> answers. first_n: keep only the first N
+    responses (None = all)."""
     raw = pd.read_csv(path, dtype=str, keep_default_na=False)
+    if first_n:
+        raw = raw.head(first_n)
     cols = find_columns(raw.columns)
     out = pd.DataFrame(index=raw.index)
     out["response_id"] = range(1, len(raw) + 1)

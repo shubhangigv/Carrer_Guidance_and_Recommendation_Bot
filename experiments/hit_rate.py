@@ -33,7 +33,7 @@ from ml.baseline_recommender import recommend_v1  # noqa: E402
 from ml.localise import apply_local_rules  # noqa: E402
 from ml.recommender_v2 import eligible_codes, load_onet_v2, recommend_v2  # noqa: E402
 from ml.recommender_v3 import HAND_FIT_SHARE, HAND_WEIGHTS, recommend_v3  # noqa: E402
-from ml.survey import (DEFAULT_SURVEY, NOT_SURE, in_field, is_complete, load_field_map,  # noqa: E402
+from ml.survey import (DEFAULT_SURVEY, ANALYSIS_CUTOFF, NOT_SURE, in_field, is_complete, load_field_map,  # noqa: E402
                        load_survey, to_student, to_student_v1)
 
 ONET_DIR = ROOT / "data" / "raw" / "onet"
@@ -102,13 +102,15 @@ def summarise(per_student, ks=KS):
 def main(argv=None):
     p = argparse.ArgumentParser(description="Hit Rate@k on the survey")
     p.add_argument("--survey", type=Path, default=DEFAULT_SURVEY)
+    p.add_argument("--first-n", type=int, default=ANALYSIS_CUTOFF,
+                   help="use only the first N responses (default: the analysis cut-off; 0 = all)")
     p.add_argument("--onet-dir", type=Path, default=ONET_DIR)
     p.add_argument("--out", type=Path, default=OUT_DIR)
     p.add_argument("--processed", type=Path, default=ROOT / "data" / "processed",
                    help="where the per-student table is written (git-ignored)")
     args = p.parse_args(argv)
 
-    tidy = load_survey(args.survey)
+    tidy = load_survey(args.survey, first_n=args.first_n or None)
     field_map = load_field_map()
     n_all = len(tidy)
     unsure = tidy["aimed_field"].eq(NOT_SURE)

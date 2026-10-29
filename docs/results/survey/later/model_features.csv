@@ -1,0 +1,5 @@
+features,n_features,students,folds,repeats,accuracy_mean,accuracy_std,macro_f1_mean,macro_f1_std,beats_answers22_on_both
+answers22,22,130,3,5,0.403,0.03,0.255,0.014,False
+answers22+branch,32,130,3,5,0.48,0.027,0.287,0.021,True
+skills+subjects,16,130,3,5,0.378,0.031,0.235,0.02,False
+branch_only,10,130,3,5,0.405,0.027,0.249,0.014,False

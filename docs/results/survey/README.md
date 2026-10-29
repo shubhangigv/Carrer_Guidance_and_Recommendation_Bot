@@ -31,6 +31,18 @@ Re-run all three whenever more responses arrive; the files are replaced.
 | `ml_feature_importance.csv` | which quiz answers the Random Forest relies on most (explanation only) |
 | `ml_counts.txt` | students and fields used; fields left out because they had fewer than 3 students |
 
+## Responses after the analysis cut-off (`later/`)
+
+The survey was closed for analysis at **87 responses** (26 Oct); every file above uses those first 87 rows
+(`ANALYSIS_CUTOFF` in `ml/survey.py`; the scripts take `--first-n 0` to use all). 52 more arrived later
+(139 on 29 Oct, 47 of them on 28 Oct). `python experiments\later_responses.py` re-runs Hit@k, the ML comparison,
+the feature sets and the hybrid on all responses into `later/`, with the same settings and rules (nothing re-tuned),
+and splits the engine's hits into "first 87" vs "later" (`batches.csv`, counts in `batches.txt`).
+What it shows: the field task grows from 5 to 10 fields, so all numbers drop and are not comparable with the main
+ones; on the later responses alone engine v3 Hit@1 is 2.0% (first 87: 14.8%); they lean towards Management,
+Business, Law and Life Sciences and have more flat skill answers (15.4% vs 5.7%); the hybrid still beats the
+engine and random. The app's field model trains on all responses (more fields it can predict).
+
 ## Limitations to write in the report
 
 - Q8 is the field a 1st-3rd year student is **aiming for**, not a proven fit or a later job. Agreement with it

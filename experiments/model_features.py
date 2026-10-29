@@ -25,7 +25,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from ml.field_model import logreg_pipeline  # noqa: E402
-from ml.survey import DEFAULT_SURVEY, NOT_SURE, feature_table, is_complete, load_field_map, load_survey  # noqa: E402
+from ml.survey import DEFAULT_SURVEY, ANALYSIS_CUTOFF, NOT_SURE, feature_table, is_complete, load_field_map, load_survey  # noqa: E402
 
 OUT_DIR = ROOT / "docs" / "results" / "survey"
 SEED, REPEATS, MIN_CLASS = 42, 5, 3
@@ -67,11 +67,13 @@ def compare(tidy, repeats=REPEATS):
 def main(argv=None):
     p = argparse.ArgumentParser(description="Compare feature sets for the field model")
     p.add_argument("--survey", type=Path, default=DEFAULT_SURVEY)
+    p.add_argument("--first-n", type=int, default=ANALYSIS_CUTOFF,
+                   help="use only the first N responses (default: the analysis cut-off; 0 = all)")
     p.add_argument("--out", type=Path, default=OUT_DIR)
     p.add_argument("--repeats", type=int, default=REPEATS)
     args = p.parse_args(argv)
     field_map = load_field_map()
-    tidy = load_survey(args.survey)
+    tidy = load_survey(args.survey, first_n=args.first_n or None)
     tidy = tidy[(tidy["aimed_field"] != NOT_SURE) & tidy["aimed_field"].isin(field_map) & tidy.apply(is_complete, axis=1)]
     counts = tidy["aimed_field"].value_counts()
     tidy = tidy[tidy["aimed_field"].map(counts) >= MIN_CLASS]

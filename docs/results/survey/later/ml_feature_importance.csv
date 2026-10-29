@@ -1,0 +1,31 @@
+feature,importance
+Realistic,0.0665
+subject:Biology,0.0639
+subject:Computer Science,0.0551
+Social,0.0548
+subject:Mathematics,0.0532
+skill:Programming,0.0527
+subject:Languages,0.0526
+skill:Leadership,0.0472
+Enterprising,0.0445
+subject:Commerce/Economics,0.0431
+skill:Mathematics,0.0429
+skill:Problem Solving,0.0425
+Investigative,0.0423
+subject:Physics/Chemistry,0.0415
+skill:Communication,0.041
+skill:Research,0.0374
+Artistic,0.0372
+subject:Social Sciences,0.0367
+subject:Arts/Design,0.036
+Conventional,0.0353
+skill:Technical/Practical Skills,0.0347
+skill:Writing,0.0323
+missingindicator_skill:Research,0.0022
+missingindicator_skill:Writing,0.0013
+missingindicator_skill:Communication,0.0007
+missingindicator_skill:Technical/Practical Skills,0.0007
+missingindicator_skill:Problem Solving,0.0005
+missingindicator_skill:Leadership,0.0005
+missingindicator_skill:Programming,0.0005
+missingindicator_skill:Mathematics,0.0003
