@@ -1,0 +1,797 @@
+==========================================================================================
+ PATHFINDER - COMPLETE PROJECT GUIDE
+ AI-Based Multi-Domain Career Guidance and Recommendation System (final-year project)
+ Updated 29 Oct 2026. Survey: main results on 87 responses (+52 later ones, 139 in total,
+ reported separately). Code: GitHub, branches main and dev (identical since 29 Oct).
+==========================================================================================
+
+This one file explains the whole project: what it does, why each decision was made, what was used,
+every number, how to run it, and what is left. Give it to any AI assistant (ChatGPT, free claude.ai,
+Gemini ...) or a teammate, and they can help you without any earlier chat history.
+
+CONTENTS
+  0.  How to use this file with another AI assistant
+  1.  The project in one page
+  2.  The problem and the survey that proves it
+  3.  Data: O*NET 31.0 (what it is, which files, which scales)
+  4.  System architecture (how the parts fit together)
+  5.  The quiz (what the student answers)
+  6.  The recommendation engines v1, v2, v3 (formulas and why)
+  7.  The ML field model and the hybrid (the trained model)
+  8.  Personalisation: areas, course, filters, weak points, "Not for me"
+  9.  Text matching (Sentence-BERT) and the chatbot (Gemini)
+  10. Career pages, roadmap, education routes, explore
+  11. Backend (FastAPI), database (MySQL), security
+  12. Frontend (the student website)
+  13. Every model in the project (trained or not)
+  14. Evaluation: every experiment and every final number
+  15. Bugs found and fixed, and decisions changed (with reasons)
+  16. Honest limitations (must be in the report)
+  17. Project rules (data, privacy, honesty)
+  18. File-by-file map of the repository
+  19. Settings: .env and config files
+  20. Setup on a new PC and how to run everything
+  21. Troubleshooting
+  22. Git and teamwork
+  23. What is DONE and what is LEFT
+  24. Viva preparation: likely questions with short answers
+  25. Glossary
+
+
+==========================================================================================
+0. HOW TO USE THIS FILE WITH ANOTHER AI ASSISTANT
+==========================================================================================
+
+1. Upload or paste this file first. If the question is about code, also paste that file
+   (for example ml/recommender_v3.py). CLAUDE.md and README.md in the project folder add more detail.
+2. Then ask, for example:
+
+   "This is my final-year project. Read the guide above. I am a student, explain simply.
+    Question: <your question>. Give exact file paths and Windows PowerShell commands."
+
+3. Rules to give any assistant (so it does not break the project's honesty rules):
+   - Do not invent results, accuracy numbers, citations or salaries. Only use numbers in this file
+     or produced by the scripts in experiments/.
+   - Never put the raw survey file (data/raw/survey/responses.csv) or .env into Git.
+   - Do not use gender, religion, caste or other sensitive attributes in recommendations.
+
+
+==========================================================================================
+1. THE PROJECT IN ONE PAGE
+==========================================================================================
+
+WHAT: A website where a student takes a short quiz and gets 10 careers from EVERY field (about 900
+careers from the US O*NET database, adapted for India), each explained from the student's own answers,
+with the skills to build, a step-by-step roadmap, Indian education routes, and a career chatbot.
+
+WHY: In our survey of 87 students, 89.7% never had a career counsellor or were not helped by one,
+and 23.0% are unsure they are on the right career path. Most career tools cover only IT or give one
+generic list. Ours covers all fields, explains every match, and says honestly when it is unsure.
+
+HOW (short):
+  - Quiz answers -> Engine v3 scores every career (interest fit + readiness + strength fit).
+  - A trained Logistic Regression ("field model") predicts which field students with similar answers
+    and the same course aim for. Used when the student picks no areas.
+  - Personalisation puts the student's chosen areas first, applies lifestyle filters, and pushes back
+    careers that need the student's weak points.
+  - Sentence-BERT matches the student's own words ("I like building websites") to careers.
+  - Gemini chatbot answers questions only from our career records.
+
+MAIN RESULT (survey, 81 students who named the field they aim for, cross-validated):
+  The hybrid (ML field model + engine) puts the student's aimed field FIRST for 66.4% of students
+  and in the TOP 5 for 71.4%. Random picking: 9.0% and 36.2%. Engine alone: 14.8% and 35.8%.
+
+TECH: Python 3.13, pandas, NumPy, scikit-learn, sentence-transformers, FastAPI, MySQL (SQLAlchemy +
+PyMySQL), plain HTML/CSS/JavaScript frontend, Google Gemini API, pytest (135 tests), Git/GitHub.
+
+
+==========================================================================================
+2. THE PROBLEM AND THE SURVEY
+==========================================================================================
+
+Survey: Google Form built by tools/create_career_survey.gs (9 questions). Closed for analysis at 87
+responses (26 Oct). 52 more arrived later (139 on 29 Oct, 47 of them on 28 Oct); they are reported
+separately (Section 14 I) and the website's field model trains on all of them.
+Raw answers: data/raw/survey/responses.csv on the team PCs only (git-ignored, never shared).
+
+The 9 questions:
+  Q1 Year of study             Q2 Branch / field of study (10 options)
+  Q3 Right career path?        Q4 Used a career counsellor?
+  Q5 How much do you enjoy...  (6 interest rows = the 6 RIASEC types, 1-5)
+  Q6 Rate your skills          (8 rows, 1-5, or "No experience" / "Can't assess")
+  Q7 Rate your subjects        (8 rows, 1-5, or "Not studied")
+  Q8 Which career field are you aiming for?   Q9 Would you use an AI career tool?
+
+Key numbers (the 87 analysed responses, docs/results/survey/survey_summary.md):
+  - 78 of 87 (89.7%) never used a counsellor, had none available, or were not helped.
+  - 20 of 87 (23.0%) are not sure or do not feel on the right path.
+  - 54 of 87 would use an AI career tool; 29 maybe.
+  - 6 of 87 have not chosen a field yet ("Not sure yet").
+  - Sample: 62.1% are 4th-years, 60.9% are engineering students (one college) -> a skewed sample.
+
+How the survey is used:
+  1. Problem statement (the numbers above).
+  2. Evaluation: Q8 (aimed field) is the "label". Does the system put that field in a student's top-k?
+  3. Training the field model (Logistic Regression) on the 22 answers + branch -> aimed field.
+
+
+==========================================================================================
+3. DATA: O*NET 31.0
+==========================================================================================
+
+O*NET = the US Department of Labor's occupation database. Version 31.0 (Aug 2026), licence CC BY 4.0
+(free to use with credit; the website footer credits it). Files go in data/raw/onet/ (not in Git).
+
+Facts (checked on the real files):
+  - 46 tab-separated .txt files; 1,016 occupations; 910 have interest + skill + knowledge data and can
+    be ranked (903 after the India filter removes gambling jobs).
+  - Files used: Occupation Data.txt (code, title, description), Career Interest Types.txt (RIASEC),
+    Essential Skills.txt (10 skills) + Transferable Skills.txt (25 skills), Knowledge.txt (33 areas),
+    Job Zones.txt, Work Context.txt (outdoor/sitting), Related Occupations.txt, title files,
+    Education file (US education shares).
+  - Scales: IM = importance 1-5; LV = level needed 0-7; OI = interest 1-7; CX = work-context 1-5.
+  - Job Zone 1-5 = how much preparation a job needs (3 = medium, 4 = about a bachelor's,
+    5 = extensive: master's/PhD/medical). Students see Job Zone 3+ only.
+  - Rows marked "Recommend Suppress = Y" (unreliable, e.g. tiny sample) are dropped on load.
+
+India adaptations: short common titles (O*NET My Next Move titles), gambling jobs excluded
+(config/india_exclusions.csv), Indian education routes, Indian job sites, cited Indian salaries only.
+
+
+==========================================================================================
+4. SYSTEM ARCHITECTURE
+==========================================================================================
+
+  Student's browser (frontend/app/*.js, served at http://127.0.0.1:8000/app/)
+        |  HTTP/JSON (all calls in frontend/app/api.js)
+        v
+  FastAPI backend (backend/main.py + backend/routes/*.py), login with JWT
+        |                    |                         |                    |
+        v                    v                         v                    v
+  ml/preferences.py    ml/semantic.py          backend/assistant.py   ml/career_needs.py,
+  (areas, filters,     (Sentence-BERT          (Gemini chatbot,       ml/pathways.py
+   weak points)         text matching)          RAG on our records)   (skills, roadmap, routes)
+        |
+        v
+  ml/recommender_v3.py (engine) + ml/field_model.py (Logistic Regression)
+        |
+        v
+  O*NET data: loaded from MySQL (if running) or the .txt files -> kept in memory
+  MySQL also stores students, quiz answers, recommendations, feedback, ratings, roadmap progress.
+
+Startup (backend/main.py build_context): load O*NET (MySQL first, else files), apply India rules,
+add Work Context, train the field model from the survey file (if present), start Sentence-BERT in the
+background. If MySQL is not running, the app still works but accounts are kept in memory only.
+
+Two-level recommendation (the original design): career FAMILY first (areas / predicted field),
+then specific careers (the engine).
+
+
+==========================================================================================
+5. THE QUIZ (frontend/app/quiz.js) - one question per screen
+==========================================================================================
+
+Order and purpose:
+  1. Areas you would like to work in - pick up to 3 of 17 (optional). Puts those careers first.
+  2. Your course - 18 options, e.g. "B.Tech - Computer Science, IT or AI" (optional).
+  3. 6 interests (1-5): Realistic, Investigative, Artistic, Social, Enterprising, Conventional (RIASEC).
+  4. 8 skills (1-5, "I have never tried it", "Not sure"): Mathematics, Programming, Problem Solving,
+     Research, Communication, Writing, Leadership, Technical/Practical Skills.
+  5. Your 3 strongest skills and 2 weakest skills (optional). Fixes "rated everything 4".
+  6. 8 subjects (1-5, "I have not studied it"): Mathematics, Physics/Chemistry, Biology, Computer
+     Science, Commerce/Economics, Languages, Social Sciences, Arts/Design.
+  7. Kind of workday: mostly desk/indoors, active/outdoors, no preference.
+  8. Study more after your degree? no / yes / not sure.
+  9. Where you want to work (city) - for job-search links.
+  10. About you (free text, with idea chips like "coding and building apps").
+Then a review screen. The 22 rated rows (6+8+8) are EXACTLY the survey rows, so the app and the
+survey match (a test checks this). If a weakness was rated "Good", the quiz shows a message and
+counts it as "Weak".
+
+Why RIASEC: Holland's RIASEC interest model is the standard used by O*NET itself, so student
+interests can be compared directly with each career's interest profile.
+
+
+==========================================================================================
+6. THE RECOMMENDATION ENGINES (knowledge-based, NOT trained)
+==========================================================================================
+
+Each quiz row maps to O*NET elements (ml/recommender_v2.py SKILL_MAP_V2 / SUBJECT_MAP_V2), e.g.
+"Problem Solving" -> Complex Problem Solving + Critical Thinking; "Biology" -> Biology knowledge.
+Student level on O*NET's scale: L = (rating - 1) / 4 x 7 (rating 1 -> 0, rating 5 -> 7).
+
+ENGINE v1 (ml/baseline_recommender.py) - first version.
+  Each part = Pearson correlation between the student's profile and the career's profile,
+  rescaled (r + 1) / 2. Score = (0.30 skills + 0.25 interests + 0.15 subjects) / 0.70 x 100.
+  Weaknesses: top 5 often all in one field; no handling of "not sure" answers.
+
+ENGINE v2 (ml/recommender_v2.py) - readiness + honest ranges.
+  - Interest fit: Pearson on RIASEC, (r + 1) / 2; flat answers -> 0.5.
+  - Readiness: for each element, weight w = (IM - 1) / 4, met = 1 - max(0, LV - L) / 7;
+    readiness = sum(w x met) / sum(w). Having MORE than needed never lowers it.
+  - "Can't assess" -> a RANGE: low bound counts the unknown as level 0, high bound as fully met.
+    Careers are ranked by the LOW bound, so a missing answer can never push a career up.
+  - Display: <= 20% unknown -> one score; 20-50% or an important unknown -> a range + up to 3
+    follow-up questions; > 50% -> score withheld (interest fit only).
+  - Field diversity: at most 2 careers of the same field (SOC major group) in the top 5.
+  PROBLEM FOUND: readiness was ~100% for almost every career for typical students (who rate
+  themselves 4), so only interests decided the order -> odd results (coaches, fire chiefs).
+
+ENGINE v3 (ml/recommender_v3.py) - USED BY THE WEBSITE. v2 + "strength fit".
+  - Strength fit: Pearson correlation between the student's 8 skill ratings (and 8 subject ratings)
+    and how IMPORTANT each of those rows is to the career. Question it answers: "are your strongest
+    rows the ones this career relies on most?" Rating everything the same -> neutral 0.5.
+    Strongest picks add +1, weakest picks -1 (fit only). Fewer than 3 usable rows -> 0.5.
+  - skill part = 0.5 x readiness + 0.5 x strength fit (same for subjects).
+  - match = (0.25 interest + 0.30 skill part + 0.15 subject part) / 0.70 x 100.
+  - Weights were chosen by hand BEFORE seeing survey results ("pre-registered").
+  - ENGINE_VERSION=v2 in .env switches the website back to v2.
+
+Why knowledge-based (not trained) for the core: it works for any brand-new student with no data,
+every score can be explained from O*NET, and it covers ~900 careers (the survey has 87 students).
+
+
+==========================================================================================
+7. THE ML FIELD MODEL AND THE HYBRID (the trained model)
+==========================================================================================
+
+File: ml/field_model.py. Model: Logistic Regression (scikit-learn), class_weight="balanced".
+Pipeline: fill missing answers with the training median (+ "was missing" flags) -> standard scaling
+-> Logistic Regression. Fixed standard settings; no hyper-parameter search (too little data).
+
+Inputs: the 22 quiz answers ("no experience/not studied" = 0, "can't assess" = missing) and, when the
+student gave a course, the branch (one-hot of the 10 survey Q2 options; each course maps to one in
+config/course_areas.csv column survey_branch). Two versions are trained: answers only, answers + branch.
+Output: the most likely survey field. Fields with fewer than 3 students are not learned. On the 87
+analysed responses that is 5 fields (IT & Computing, Engineering, Healthcare & Medicine, Business &
+Finance, Arts Design & Media). The website trains on ALL responses in the file: with 139 responses,
+130 students in 10 fields (adds Management, Law, Life Sciences, Education, Social Work; only
+Agriculture, with 2 students, is left out).
+
+Training: in memory, every time the server starts, from data/raw/survey/responses.csv on that PC.
+Never saved to disk, never committed. No file -> the app works without it (uses course -> areas).
+USE_FIELD_MODEL=no in .env switches it off.
+
+Why Logistic Regression: it was the best of the models compared (Section 14), it is simple,
+fast, and explainable, and it suits small data.
+
+THE HYBRID (what the website does when the student picks no areas):
+  1. Field model predicts the field.  2. Engine v3 ranks all careers.
+  3. The first 3 places = the best careers inside the predicted field that do NOT clash with the
+     student's weak points; the rest = the engine's best others (with field diversity).
+  The note on the page says it is the model's best guess and invites the student to pick areas.
+  "3 places" was fixed before testing.
+
+Why a hybrid: the survey study showed that interests (which the engine leans on) barely differ
+between fields, while skills/subjects and the branch do; the ML model uses those well. The engine
+then picks specific careers inside the field and explains them.
+
+
+==========================================================================================
+8. PERSONALISATION (ml/preferences.py, config/areas.csv, config/course_areas.csv)
+==========================================================================================
+
+Order of steps:
+  1. Pool: Job Zone 3+ careers, minus careers the student marked "Not for me".
+  2. Filters (only if chosen; each reports how many careers it removed; skipped if fewer than 30
+     careers would remain):
+       - "No further study" -> removes Job Zone 5 (master's/PhD/medical degree).
+       - "Desk" -> removes careers outdoors about weekly or more (Work Context CX >= 3.5).
+       - "Active" -> removes careers sitting more than half the time (Work Context CX >= 4).
+  3. Score with engine v3.
+  4. Weak points: a skill picked as weakest but rated 3+ is scored as 2 ("Weak"). A career CLASHES
+     with the student if it needs a weak point (picked weakness, or a row rated 1-2 / never tried /
+     not studied) more than 75% of careers do AND rates it important (IM >= 3). Clashing careers go
+     last in every group, say why ("Heads-up: needs Programming..."), and never fill places chosen
+     automatically (predicted field or course areas).
+  5. Grouping: areas picked -> 7 "In your areas" + 3 "Also worth a look" (exploration).
+     No areas but field model -> 3 from the predicted field + 7 others.
+     No areas, no model, course given -> the course's areas.
+  6. Reasons per career: "In an area you picked", "Linked to your course", "Uses your strength:
+     Mathematics - needed here more than in most careers" (same 75% + IM >= 3 rule).
+
+Areas: 17 (Computers & IT, Maths/data, Engineering, Science, Health, Business/finance, Management,
+Sales/marketing, Law/government, Teaching, Helping people, Arts/design/media, Sports, Nature/farming,
+Food/hotels/travel, Building/repair, Transport). Each = O*NET code prefixes, checked on real data.
+Manager jobs (O*NET code 11) were re-sorted into their real industries (e.g. Fitness Coordinator ->
+Sports, Health Services Manager -> Health).
+
+None of this is part of the Hit@k evaluation (asking the area and then checking the area would be
+circular). It is evaluated by the user test (Section 14, not run yet).
+
+
+==========================================================================================
+9. TEXT MATCHING AND CHATBOT
+==========================================================================================
+
+Text matching (ml/semantic.py): Sentence-BERT model all-MiniLM-L6-v2 (pre-trained, used as-is)
+turns the student's text and each career's text (title, other titles, description) into 384-number
+vectors; cosine similarity finds careers with similar MEANING ("drawing posters" -> Graphic Designer).
+Only matches above a minimum similarity are shown (0.30 for Sentence-BERT; 0.08 for the TF-IDF
+fallback used if Sentence-BERT is not installed). Too vague ("I love using laptop") -> "No confident
+match" with ideas to write more. Career vectors are cached in data/processed/. The page always says
+which method was used.
+
+Chatbot (backend/assistant.py): RAG = Retrieval-Augmented Generation. For a question, it retrieves up
+to 8 relevant career records (text matcher + the student's own matches), sends them with the question
+to Google Gemini (default model gemini-2.5-flash, key GEMINI_API_KEY in .env), and Gemini must answer
+only from those records. Without a key it runs in offline mode (lists matching careers). Unverified
+education routes are flagged to the model as "not yet checked".
+
+
+==========================================================================================
+10. CAREER PAGES, ROADMAP, ROUTES, EXPLORE
+==========================================================================================
+
+Career page: description, "What you'd do" (first sentence of O*NET description), how to get there
+in India (route + stream after Class 10 + US education shares + career ladder: easier jobs to start
+in, harder ones to grow into), every important skill/knowledge (IM >= 3) marked have / build / check
+yourself, salary only if cited in config/salary_india.csv (currently empty, so the page says no
+verified salary yet), job-search links (LinkedIn, Indeed) for the student's city, similar careers.
+
+Requirements and roadmap (ml/career_needs.py): skills to build ordered by priority = importance x gap;
+first 3 "Start now", next 3 "Next", rest "Later". Roadmap = qualification -> skills -> experience ->
+applying; ticked steps are saved (table roadmap_progress). Learning links are search pages only
+(Coursera, YouTube, SWAYAM, NPTEL); specific courses only from config/courses.csv with a checked date
+(empty for now).
+
+Education routes (config/career_paths.csv, ml/pathways.py): 73 rows of step-by-step Indian routes
+(e.g. Class 12 PCB -> NEET-UG -> MBBS) with official links. ALL WERE DRAFTED BY AI AND ARE MARKED
+verified = no; the page shows "Not yet checked - confirm on the official site". A route counts as
+checked only if every row is verified = yes. SHOW_UNVERIFIED_ROUTES=no hides unchecked routes (do not
+use it until some routes are checked, or every route disappears).
+
+Explore: 27 industries (config/industries.csv) and search by job title (incl. O*NET alternate titles).
+
+Titles: 67 careers shared 22 short names (e.g. "Professor", "Engineer"); they now get specific names
+("Professor (Engineering)", "Ship Engineers") so a list never shows the same name twice.
+
+
+==========================================================================================
+11. BACKEND, DATABASE, SECURITY
+==========================================================================================
+
+FastAPI (backend/main.py; routers in backend/routes/). 26 endpoints, documented at /docs:
+  GET  /health                         data source and counts
+  POST /auth/register, /auth/login     account, JWT token
+  GET  /me                             the logged-in student
+  GET  /quiz/options                   areas, courses, lifestyle choices
+  POST /assessment                     save quiz answers (+ profile)
+  GET  /recommend                      the 10 matches (groups, reasons, notes)
+  PUT/DELETE /feedback/hidden/{id}, GET /feedback/hidden     "Not for me"
+  PUT  /feedback/rating/{id}, GET /feedback/ratings          1-5 user-test ratings
+  GET  /careers/search, /careers/{id}, /careers/{id}/requirements, /careers/{id}/pathway
+  POST /target/{id}, GET /target/{id}/questions              "how ready am I for this career"
+  GET  /roadmap/{id}, PUT /roadmap/{id}/progress, GET /roadmaps
+  GET  /industries, /industries/{id}
+  POST /match/text                     text matching
+  GET  /assistant/status, POST /assistant/chat               chatbot
+Request/response shapes and validation: backend/schemas.py (Pydantic). Shared helpers: backend/deps.py.
+Storage: backend/repository.py (SqlRepository for MySQL, MemoryRepository for tests/no MySQL).
+
+MySQL database "career_guidance" (database/schema.sql), 16 tables:
+  13 from the ER diagram: student, assessment, assessment_rating, recommendation, career, skill,
+  career_skill, interest, career_interest, knowledge, career_knowledge, course, job
+  + roadmap_progress (migration 003), career_feedback (004, "Not for me"), career_rating (005).
+  assessment also has preferred_location, about_me, profile_json (areas, course, picks...).
+Migrations (database/migrations/002-005) run automatically at server start and are safe to re-run.
+scripts/load_onet_to_mysql.py loads O*NET into MySQL; a test checks MySQL and files give identical results.
+
+Security: passwords hashed with bcrypt; login tokens are JWT (HS256), secret JWT_SECRET and expiry
+JWT_EXPIRE_MINUTES (60) in .env; a student can only see their own assessments (404 otherwise);
+no keys or passwords in code.
+
+
+==========================================================================================
+12. FRONTEND (frontend/app/) - plain HTML/CSS/JavaScript, no build step
+==========================================================================================
+
+index.html (shell), styles.css (light/dark), api.js (every API call), core.js (router, helpers,
+job/learning links), one file per page: account.js (register/login), quiz.js, matches.js, career.js,
+roadmap.js, explore.js, assistant.js. Served by FastAPI at /app/. React was planned but dropped: the
+plain app covers every page without a build step. frontend/prototype/ = the earlier offline prototype.
+
+Matches page features: groups "In your areas" / "Also worth a look", "What you'd do", reasons shared
+by most cards shown once at the top, tags (area, "Fits your course", "Matches what you wrote"),
+"Not for me" with undo, 1-5 "Would you consider it?", notes on filters, warning when all skills were
+rated the same, text matches with an inline editor.
+
+
+==========================================================================================
+13. EVERY MODEL IN THE PROJECT
+==========================================================================================
+
+  Model                              Trained?            Used where
+  ---------------------------------  ------------------  -------------------------------------
+  Engine v1 / v2 / v3                No (formulas)       v3 = website; v1, v2 = comparison
+  Logistic Regression (field model)  YES, by us, survey  website (when no areas) + experiments
+  Random Forest, SVM (RBF), majority Yes, only in CV     experiments/ml_compare.py comparison only
+  Sentence-BERT all-MiniLM-L6-v2     Pre-trained (used)  text matching
+  TF-IDF                             Fit on career text  fallback if Sentence-BERT missing
+  Google Gemini (gemini-2.5-flash)   Pre-trained (API)   chatbot
+  XGBoost                            NOT run             package not installed (future work)
+
+
+==========================================================================================
+14. EVALUATION - EVERY EXPERIMENT AND FINAL NUMBER (87 responses unless stated)
+==========================================================================================
+
+All numbers come from scripts in experiments/; files in docs/results/. The report tables are
+generated by experiments/report_tables.py -> docs/report/results_tables.md (never typed by hand).
+
+A) Hit Rate@k (experiments/hit_rate.py, hybrid.py). 81 students who named an aimed field (Q8).
+   "Hit@k" = the aimed field is among the student's top-k careers. Random = exact formula.
+   Hybrids are cross-validated: the ML part never saw the student it predicts.
+
+   Method                                         Hit@1    Hit@3    Hit@5   (95% CI of Hit@5)
+   Random choice (expected)                        9.0%    24.1%    36.2%
+   Engine v1                                      12.3%    25.9%    30.9%   (21.9-41.6%)
+   Engine v2                                       7.4%    21.0%    32.1%   (22.9-42.9%)
+   Engine v3 (pre-chosen weights, the website)    14.8%    29.6%    35.8%   (26.2-46.7%)
+   Engine v3, weights tuned by CV                 14.6%    29.9%    36.5%
+   Hybrid: ML field (answers) + v3                57.0%    57.0%    66.2%   (55.9-76.0%)
+   Hybrid: ML field (answers + branch) + v3       66.4%    66.4%    71.4%   (61.0-80.3%)
+
+   Hit@1 = Hit@3 for hybrids because the first 3 places all come from the predicted field.
+
+B) Weight tuning (experiments/tune_weights.py): ~200 weight combinations, 5-fold CV x 5.
+   Tuned: Hit@1 14.6%, Hit@5 36.5% vs pre-chosen 14.8% / 35.8% -> not better on both -> the website
+   keeps the pre-chosen weights (rule fixed in advance).
+
+C) ML vs engine (experiments/ml_compare.py): predict the aimed field. 77 students in 5 fields
+   (fields under 3 students left out), repeated stratified 3-fold CV x 5 (3 folds because Arts has
+   only 3 students).
+     Majority baseline 35.1% acc / 0.104 macro-F1   Logistic Regression 60.5% / 0.527
+     SVM (RBF) 58.4% / 0.412                       Random Forest 57.7% / 0.383
+     Engine v3 top-1 field 14.3% / 0.199           Engine v2 7.8% / 0.083
+   (Favours the models: they choose among 5 fields; the engine ranks ~900 careers.)
+
+D) Which inputs (experiments/model_features.py, same folds, rule fixed in advance):
+     22 answers 60.5% / 0.527   22 answers + branch 69.6% / 0.636 (chosen)
+     skills + subjects only 58.7% / 0.464   branch only 53.0% / 0.391
+
+E) Survey study (experiments/survey_insights.py -> insights.md). Eta squared = share of an answer's
+   variation explained by the aimed field (0 = none):
+     Programming 0.52, Computer Science 0.41, Biology 0.28, Physics/Chemistry 0.17, Maths 0.15
+     Interests: 0.01-0.04 (barely differ) -> explains why the interest-heavy engine misses.
+   48 students aim for the field their branch leads to. 4.6% gave every skill the same rating.
+   47.9% of all skill/subject answers are 4 or 5 (students rate themselves kindly).
+
+F) Checks on O*NET with synthetic students (NOT accuracy; docs/results/summary.md, 910 careers):
+   Self-match (a student copied from a career: is that career in the top 5?): Pearson v1-style 79.2%,
+   weighted Pearson 67.0%, v2 64.9%, v3 94.7% (v3 partly favoured: built similarly).
+   Weight sensitivity (v2 weights +/-10%): 95.5-97.3% of the top 5 stays the same.
+   Unanswered questions: v2's range method never pushes a wrong career into the top 5 (naive method:
+   0.70-1.00 wrong careers); after answering follow-ups the top 5 recovers 66% / 99% / 100%
+   (1 / 2 / 3 hidden answers; with 1 hidden answer often no follow-ups are shown).
+
+G) User test (experiments/user_test.py, docs/user_test_protocol.md): students rate each of their
+   matches 1-5 ("Would you consider it?"). Built into the website. NOT RUN YET.
+
+H) Smoke test: all 26 endpoints on the real O*NET data passed (28 Oct); 135 automated tests pass.
+
+I) Responses after the cut-off (experiments/later_responses.py -> docs/results/survey/later/).
+   The main results above use the first 87 rows (ANALYSIS_CUTOFF in ml/survey.py; every survey
+   script takes --first-n, 0 = all). The same evaluations on all 139 responses, nothing re-tuned:
+     132 students with a field: v3 Hit@1/3/5 9.8% / 23.5% / 31.8%; random 8.4% / 22.8% / 34.4%;
+     hybrid (answers) 39.7% / 39.7% / 48.5%; hybrid (answers + branch) 48.6% / 49.2% / 55.5%.
+     ML, 130 students in 10 fields: logreg 40.3% / 0.255, forest 41.7% / 0.266, SVM 36.5% / 0.208,
+     majority 27.7% / 0.043; + branch 48.0% / 0.287 (still better on both).
+   The later 52 alone: v3 Hit@1 2.0% (first 87: 14.8%), Hit@5 25.5% (35.8%); 15.4% flat skill
+   answers (first 87: 5.7%, same definition); they lean towards Management, Business, Law, Life Sciences.
+   Numbers drop because the task grows from 5 to 10 fields (even the majority guess drops 35.1% ->
+   27.7%); they are not comparable with the main numbers. The hybrid still clearly beats random.
+   Why 87 stays the main result: the cut-off was set before these responses were analysed, and all
+   docs/rules were based on it. Both are reported openly (report tables, section 2b).
+
+
+==========================================================================================
+15. BUGS FOUND AND FIXED, DECISIONS CHANGED (and why)
+==========================================================================================
+
+  - Readiness saturated (v2): typical students got ~100% skills for every career -> interests alone
+    decided -> odd careers. Fix: engine v3 strength fit.
+  - Text box matched shared words (TF-IDF): "I love using laptop" -> Tree Trimmer. Fix: Sentence-BERT
+    + a minimum similarity + the same Job Zone pool as the quiz.
+  - "Management" area contained Fitness Coordinators, Funeral Home Managers (O*NET files all managers
+    under code 11). Fix: managers re-sorted into their real industries.
+  - Repeated reasons on every card ("High Social interest") -> shown once at the top.
+  - Game Designer recommended to a student weak at coding and design. Causes: the weakness pick did
+    not override the rating; the predicted field forced 3 IT slots; no clash check. Fix: weakness pick
+    overrides; clash rule; automatic slots never take a clashing career.
+  - BUG: the fit ignored a career's importance when O*NET had dropped its level as unreliable
+    (~1,000 values, 302 careers, e.g. Software Developer's Programming). Fixed 21 Oct; all results
+    re-run (they changed slightly; the hybrid barely).
+  - Weight tuning: first looked better; after the bug fix and on 87 responses it is not better on
+    both measures -> pre-chosen weights kept.
+  - Field model: adding the branch beat answers only (rule fixed in advance) -> used with a course.
+  - Repeated titles ("Professor" twice) -> specific titles.
+  - A route counted as checked if its first row was -> now every row must be.
+  - "Model confidence 100%" removed from the note (overconfident for a small survey).
+
+
+==========================================================================================
+16. HONEST LIMITATIONS (must be in the report)
+==========================================================================================
+
+  - The aimed field (Q8) is the student's own plan, not a proven fit or career outcome.
+  - Small, skewed sample: 87 students, one college, 62% 4th-year, 61% engineering.
+  - 52 responses came after the analysis cut-off; on all 139 the numbers are lower (10 fields
+    instead of 5, more flat answers in the later batch). Reported in Section 14 I.
+  - Engine v3 alone beats random at #1 (14.8% vs 9.0%) but not in the top 5 (35.8% vs 36.2%).
+    The improvement comes from the hybrid.
+  - In the main evaluation the field model learns only 5 fields; the website's model (139 responses)
+    learns 10, but several have only 3-9 students.
+  - Self-ratings are generous (47.9% are 4-5) and approximate.
+  - Areas/course/lifestyle answers are not in Hit@k (circular); the user test (not run) covers them.
+  - config/survey_field_map.csv uses 19-104 (Epidemiologists/Medical Scientists) for "Agriculture &
+    Environment" - an error, but the map was fixed before any result, so it was kept and is reported;
+    it affects 1 student.
+  - All 73 education-route rows are AI drafts until the team checks them. No Indian salaries or
+    specific courses yet (only cited/checked data is allowed).
+  - O*NET is US data; India adaptations are partial.
+  - Future work: job listings, resume analyser, ESCO/NCO-2015 (Indian occupation codes), React app,
+    larger multi-college survey, XGBoost, running the user test.
+
+
+==========================================================================================
+17. PROJECT RULES
+==========================================================================================
+
+  - Never invent results, accuracy numbers, datasets, citations or salaries.
+  - Raw survey responses never leave the team PCs; never commit them; tests use synthetic data only.
+  - Never modify data/raw/; derived files go to data/cleaned/ or data/processed/.
+  - No passwords/keys in code: .env (git-ignored) + python-dotenv.
+  - Check real file columns before using them (O*NET 31.0 renamed files).
+  - Never use gender, religion, caste or other sensitive attributes.
+  - Decision rules for experiments are fixed BEFORE looking at results (no tuning on the test data).
+
+
+==========================================================================================
+18. FILE-BY-FILE MAP
+==========================================================================================
+
+ml/ (the brain)
+  baseline_recommender.py  engine v1 + O*NET loaders (load_onet, load_from_mysql), SOC field names
+  recommender_v2.py        engine v2: readiness, ranges, follow-ups, diversity, explanations, target career
+  recommender_v3.py        engine v3: strength fit, weights (used by the website)
+  field_model.py           Logistic Regression field model (trained at server start, in memory)
+  preferences.py           areas, course, filters, weak points, clash rule, groups, reasons
+  semantic.py              Sentence-BERT / TF-IDF text matching
+  career_needs.py          requirements (have/build) and roadmap
+  pathways.py              education routes, stream after Class 10, US education shares, career ladder, courses
+  localise.py              short titles, unique titles, India exclusions, industries, salaries
+  survey.py                reads the Google Form CSV, engine input, ML features, field map
+backend/
+  main.py                  FastAPI app, startup, main endpoints
+  routes/explore.py, roadmap.py, assistant.py   other endpoints
+  deps.py                  shared context, login dependency, engine choice
+  schemas.py               request/response models
+  repository.py            MySQL / in-memory storage
+  security.py              bcrypt + JWT
+  db.py                    MySQL connection, schema + migrations
+  assistant.py             Gemini chatbot (RAG)
+frontend/app/              the website (Section 12); frontend/prototype/ = old offline prototype
+database/schema.sql, migrations/002-005.sql
+experiments/               every experiment (Section 14) + report_tables.py + user_test.py
+                           + later_responses.py (all responses, incl. after the cut-off)
+tests/                     135 tests (pytest); fake_onet.py = tiny fake O*NET for tests
+scripts/load_onet_to_mysql.py, inventory_onet.py
+config/                    editable data files (Section 19)
+notebooks/01-03            data exploration, v1 demo, v2 demo
+tools/create_career_survey.gs   builds the Google Form
+docs/                      results/, report/results_tables.md, user_test_protocol.md, this guide
+CLAUDE.md                  full technical context and status; README.md  setup and run
+
+
+==========================================================================================
+19. SETTINGS
+==========================================================================================
+
+.env (copy .env.example; never commit):
+  MYSQL_HOST/PORT/USER/PASSWORD/DATABASE   database connection
+  JWT_SECRET (long random), JWT_EXPIRE_MINUTES (60)
+  GEMINI_API_KEY, GEMINI_MODEL (gemini-2.5-flash)    chatbot
+  ENGINE_VERSION=v3 (or v2)
+  SHOW_UNVERIFIED_ROUTES=yes (no = only checked routes)
+  USE_FIELD_MODEL=yes (no = switch the field model off)
+
+config/ (edit without code):
+  areas.csv (17 areas -> O*NET prefixes)   course_areas.csv (18 courses -> areas + survey branch)
+  career_paths.csv (73 route rows, verified=no)   india_exclusions.csv (1 rule: gambling)
+  industries.csv (27)   salary_india.csv (empty: only cited salaries)   courses.csv (empty: only checked)
+  survey_field_map.csv (11 survey fields -> O*NET prefixes; FIXED, do not change)
+
+
+==========================================================================================
+20. SETUP ON A NEW PC AND RUNNING (Windows PowerShell, in the project folder)
+==========================================================================================
+
+  python -m venv .venv
+  .\.venv\Scripts\Activate.ps1
+  pip install -r requirements-dev.txt
+  pip install torch --index-url https://download.pytorch.org/whl/cpu
+  pip install -r requirements-ml.txt
+  Copy-Item .env.example .env        (then edit .env)
+
+  O*NET: download https://www.onetcenter.org/dl_files/database/db_31_0_text.zip, extract into
+         data\raw\onet\
+  MySQL: create database career_guidance (utf8mb4), then  python scripts\load_onet_to_mysql.py
+  Survey file (team PC only): data\raw\survey\responses.csv  (Google Forms -> Responses -> three dots
+         -> Download responses (.csv) -> extract -> rename)
+
+Run the website:   .venv\Scripts\uvicorn backend.main:app --reload
+  App: http://127.0.0.1:8000/app/     API docs: /docs     Health: /health
+
+Tests:             pytest -q -rs
+Experiments:       python experiments\survey_analysis.py, survey_insights.py, hit_rate.py,
+                   tune_weights.py, ml_compare.py, model_features.py, hybrid.py
+                   (these use the first 87 responses; add --first-n 0 for all)
+                   later_responses.py (all responses -> docs/results/survey/later/)
+                   (Phase B: self_match.py, weight_sensitivity.py, masking.py, summarise.py)
+User test:         python experiments\user_test.py --since 2026-10-29 --exclude-emails team@x.com
+Report tables:     python experiments\report_tables.py
+
+
+==========================================================================================
+21. TROUBLESHOOTING
+==========================================================================================
+
+  - /health says "files": MySQL is not running or empty -> start MySQL80 service, run the loader.
+    The app still works; accounts are lost on restart.
+  - "Text matcher is still starting": Sentence-BERT loads in the background (~1 minute); slower on
+    low memory. Close browser tabs / other programs (the PC had < 2 GB free).
+  - "OpenBLAS ... memory allocation failed": low memory -> close programs; or
+    $env:OPENBLAS_NUM_THREADS=1 before running Python.
+  - Chatbot says offline: no GEMINI_API_KEY in .env (or no internet).
+  - No "Suggested field" on matches: no survey file on that PC, or USE_FIELD_MODEL=no, or the student
+    picked areas (their choice wins).
+  - Old results in the browser: press Ctrl+F5, or "Change my answers" -> "See my matches".
+  - All routes vanished: SHOW_UNVERIFIED_ROUTES=no while nothing is verified -> set it back to yes.
+  - Tests fail only once with memory errors: rerun after closing programs.
+
+
+==========================================================================================
+22. GIT AND TEAMWORK
+==========================================================================================
+
+Repository: https://github.com/shubhangigv/Carrer_Guidance_and_Recommendation_Bot (public)
+Branches: dev = daily work; main = the submitted version (fast-forwarded to dev on 29 Oct);
+survey-87-results = tanisha's final survey re-run (merged into dev on 28 Oct).
+Daily: git pull -> work -> git add <files> -> git commit -m "what changed" -> git push.
+Never commit .env or data/raw/survey/responses.csv (git-ignored). Split work by file to avoid conflicts.
+Add teammates: GitHub repo Settings -> Collaborators -> Add people -> role Write.
+
+
+==========================================================================================
+23. WHAT IS DONE AND WHAT IS LEFT (as of 29 Oct)
+==========================================================================================
+
+DONE
+  [x] O*NET data, India rules, MySQL database (16 tables), loader
+  [x] Engines v1, v2, v3; field model; hybrid; personalisation; weak-point handling
+  [x] Website: quiz, matches, career, roadmap, explore, chatbot; text matching
+  [x] Survey closed for analysis (87); all survey analyses re-run on 87 (by tanisha, merged)
+  [x] 52 later responses (139 total): evaluated separately, report section 2b; website trains on all 139
+  [x] dev merged into main on GitHub (29 Oct)
+  [x] Demo script and viva sheet: docs/demo_and_viva.md
+  [x] All experiments run; report tables generated; O*NET checks run
+  [x] 135 tests pass; 26 endpoints smoke-tested on real data
+  [x] README, CLAUDE.md, user-test guide, this guide; everything on GitHub (dev)
+
+LEFT
+  [ ] Restart the server so the website's field model trains on the 139-response file.
+  [ ] Write/assemble the report (tables ready in docs/report/results_tables.md).
+  [ ] Check at least 3-5 education routes (doctor, engineer, CA) and set verified=yes.
+  [ ] Demo: fresh account, quiz with and without areas, close other programs.
+  [ ] Optional: mini user test (3-5 students) -> experiments/user_test.py; else report it as future work.
+  [ ] Optional: add teammates as GitHub collaborators; update the shared status doc to the final numbers.
+  [ ] Submit (deadline 31 Oct).
+
+
+==========================================================================================
+24. VIVA PREPARATION - LIKELY QUESTIONS, SHORT ANSWERS
+==========================================================================================
+
+(A shorter printable version with the demo script: docs/demo_and_viva.md)
+
+Q: What problem does it solve?
+A: Students lack guidance (89.7% of our 87 surveyed had no counsellor or no help). We recommend
+   careers from all fields, explain each one, and show how to get there.
+
+Q: Where does the career data come from?
+A: O*NET 31.0 from the US Department of Labor (CC BY 4.0): ~900 rankable careers with interests,
+   skills, knowledge, levels, job zones. We adapted titles, exclusions and routes for India.
+
+Q: Is your main engine machine learning?
+A: The core engine is knowledge-based: formulas comparing the student with O*NET profiles. It needs
+   no training, works for any new student, and every score is explainable. The ML part is a Logistic
+   Regression field model trained on our survey, combined with the engine as a hybrid.
+
+Q: Why Logistic Regression?
+A: We compared it with Random Forest, SVM and a majority baseline using cross-validation; it was best
+   (60.5% accuracy, macro-F1 0.527 on 5 fields; 69.6% with the branch). It is simple and suits small data.
+
+Q: What is RIASEC?
+A: Holland's six interest types: Realistic, Investigative, Artistic, Social, Enterprising,
+   Conventional. O*NET scores every career on them, so we compare directly.
+
+Q: What is readiness / strength fit?
+A: Readiness: do your levels meet the levels the career needs (weighted by importance)? Strength fit:
+   are your strongest skills the ones the career relies on most (Pearson correlation)?
+
+Q: How do you handle "I can't assess this skill"?
+A: We give a score range (worst and best case) and rank by the lower bound, so a missing answer can
+   never push a career up. We then ask up to 3 follow-up questions.
+
+Q: How did you evaluate it?
+A: Hit Rate@k: is the field a student aims for among their top-k careers? 81 students, compared with
+   random. Hybrid: 66.4% at #1 and 71.4% in the top 5 vs 9.0% and 36.2% random. ML parts were
+   cross-validated so no student's answer was used to predict themselves.
+
+Q: What is cross-validation and why?
+A: Split students into folds; train on some, test on the rest, rotate. It gives an honest estimate on
+   unseen students instead of grading the model on data it learned from.
+
+Q: What is macro-F1?
+A: The F1 score (balance of precision and recall) averaged over fields with equal weight, so small
+   fields count as much as big ones.
+
+Q: Why is the engine alone close to random in the top 5?
+A: Interests barely differ between fields in our survey (eta squared 0.01-0.04), and the engine relies
+   on them. Skills, subjects and branch separate fields well, so the hybrid uses ML for the field.
+
+Q: Did you tune the weights?
+A: We tried cross-validated tuning; it did not improve both measures, so we kept weights chosen
+   before seeing results. That avoids overfitting to 87 students.
+
+Q: What is Sentence-BERT?
+A: A pre-trained model that turns sentences into vectors so similar meanings are close. We match the
+   student's own words to career descriptions with cosine similarity.
+
+Q: What is RAG in your chatbot?
+A: Retrieval-Augmented Generation: we first retrieve the relevant career records from our database,
+   then Gemini answers using only those, which reduces made-up answers.
+
+Q: How do you protect student data?
+A: Passwords hashed with bcrypt, JWT login, students see only their own data, raw survey answers never
+   leave the team PC or enter Git, the field model is never saved, no sensitive attributes are used.
+
+Q: Limitations?
+A: Small one-college sample; aimed field is a plan, not an outcome; US data adapted to India; routes
+   still need checking; the user test is not run yet. (Section 16.)
+
+Q: You got 139 responses - why does the report use 87?
+A: We closed the survey for analysis at 87 before analysing, and fixed all rules on that. 52 came
+   later; we ran the same evaluations on all 139 and report them openly. The task becomes 10 fields
+   instead of 5, so numbers drop, but the hybrid still clearly beats the engine and random. The
+   website's model trains on all 139, so it can suggest more fields.
+
+Q: Future work?
+A: Job listings, resume analyser, Indian occupation codes (NCO-2015 via ESCO), larger survey, user
+   study, mobile/React app.
+
+
+==========================================================================================
+25. GLOSSARY
+==========================================================================================
+
+  O*NET        US occupation database used for every career's profile
+  SOC code     Standard Occupational Classification code, e.g. 15-1252.00 = Software Developers;
+               first 2 digits = field (15 = Computer & Mathematical)
+  RIASEC       Holland's 6 interest types
+  IM / LV      O*NET importance (1-5) / level needed (0-7)
+  Job Zone     preparation needed (1-5)
+  Pearson r    correlation (-1 to 1) of two profiles' shapes; rescaled to 0-1
+  Readiness    weighted share of a career's required levels you meet
+  Strength fit Pearson of your ratings vs the career's importance per quiz row
+  Hit@k        share of students whose aimed field appears in their top-k
+  CI           confidence interval (Wilson 95%)
+  CV           cross-validation (train on some students, test on others)
+  Macro-F1     F1 averaged over classes equally
+  Eta squared  share of an answer's variation explained by the group (field)
+  Hybrid       ML predicts the field, engine ranks careers inside it
+  RAG          Retrieval-Augmented Generation (chatbot grounded in our records)
+  JWT          JSON Web Token (login token);  bcrypt  password hashing
+  Migration    SQL script that updates an existing database safely
+  Pre-registered  decided before looking at results (prevents tuning on test data)
