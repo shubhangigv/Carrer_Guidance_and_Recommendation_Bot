@@ -1,8 +1,13 @@
-// Sign up / log in (#/login). After logging in the student returns to the page they wanted.
+// Sign up / log in (#/login): the first page a logged-out visitor sees (core.js route()).
+// After logging in the student goes to the page they wanted, else the home page.
 
 PAGES.login = (params) => {
   const signup = params[0] !== "existing";
-  show(`<div class="cols">
+  show(`<div style="margin-bottom:20px"><p class="kicker">Career guidance for every field</p>
+    <h1>Welcome to Pathfinder</h1>
+    <p class="lead">Answer a short quiz about what you enjoy and what you are good at, and see which of
+      <span id="careerCount">900+</span> careers fit you, why, and how to get there.</p></div>
+    <div class="cols">
     <div class="wide card" style="max-width:560px">
       <div class="tabs" role="tablist">
         <button type="button" role="tab" aria-selected="${signup}" id="tabNew">New here</button>
@@ -31,6 +36,7 @@ PAGES.login = (params) => {
       <p class="soft small" style="margin-top:8px">So your answers, matches and roadmap progress are saved and you can come back to them.
       Your password is stored only as a bcrypt hash. Your answers are used only to compute your matches.</p></div>
   </div>`);
+  checkServer();
   $("tabNew").onclick = () => { location.hash = "#/login"; };
   $("tabOld").onclick = () => { location.hash = "#/login/existing"; };
   const err = (id, e) => { $(id).textContent = e ? e.message : ""; $(id).hidden = !e; };
@@ -64,5 +70,5 @@ async function afterLogin() {
   renderWho();
   const next = sessionStorage.getItem("pathfinder.next");
   sessionStorage.removeItem("pathfinder.next");
-  location.hash = next && next !== "#/login" ? next : (state.assessmentId ? "#/matches" : "#/quiz");
+  location.hash = next && !next.startsWith("#/login") ? next : "#/";
 }

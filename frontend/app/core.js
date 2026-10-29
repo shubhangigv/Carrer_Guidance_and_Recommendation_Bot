@@ -41,9 +41,13 @@ function handle(err) {
 }
 
 // ---------------------------------------------------------------- router
+// Logged out: only the sign-up / log-in page (the page asked for is opened after logging in).
+// Logged in: the full site with the tabs.
 function route() {
   const parts = (location.hash.replace(/^#\/?/, "") || "home").split("/").map(decodeURIComponent);
   const name = PAGES[parts[0]] ? parts[0] : "home";
+  if (!loggedIn() && name !== "login") { needLogin(location.hash); return; }
+  if (loggedIn() && name === "login") { location.hash = "#/"; return; }
   const nav = name === "search" ? "explore" : name;
   document.querySelectorAll(".nav a").forEach(a => a.dataset.nav === nav ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
   document.onkeydown = null;                        // the quiz sets its own keyboard shortcuts
@@ -69,9 +73,10 @@ async function syncMe() {
 }
 
 function renderWho() {
+  document.querySelector(".nav").style.display = loggedIn() ? "" : "none";   // tabs only after logging in
   $("who").innerHTML = loggedIn()
     ? `<span>${esc(state.name || state.email)}</span><button class="btn quiet" type="button" id="logoutBtn">Log out</button>`
-    : `<a class="btn" href="#/login">Log in</a>`;
+    : "";
   const b = $("logoutBtn");
   if (b) b.onclick = () => { api.logout(); state = blankState(); saveState(); renderWho(); location.hash = "#/"; toast("Logged out."); };
 }
@@ -138,9 +143,14 @@ PAGES.home = async () => {
         <a href="#/assistant"><span class="n">3</span><span><b>Ask the assistant</b><br><span class="soft small">Talk through your doubts about courses and careers.</span></span></a>
       </div>
     </section>`);
+  await checkServer();
+};
+
+// Shows "Demo mode" / "Server not reachable" at the top, and the number of careers where a page shows it.
+async function checkServer() {
   try {
     const h = await api.health();
     $("careerCount") && ($("careerCount").textContent = h.careers_ranked);
     notice(h.storage === "mysql" ? "" : "<b>Demo mode:</b> MySQL is not connected, so accounts and answers are lost when the server stops.");
   } catch (e) { notice(`<b>Server not reachable.</b> ${esc(e.message)}`); }
-};
+}

@@ -21,7 +21,7 @@ Print this page. The full details are in `docs/PROJECT_GUIDE.txt`; every number 
 
 | Time | What you do | What you say |
 |---|---|---|
-| 0:00 | Show the home page | "Most students get no career guidance: in our survey of 87 students, 89.7% had no counsellor or got no help. Pathfinder recommends careers from every field, not just IT, and explains each one." |
+| 0:00 | Open the site: the sign-up page shows first. Log in with demo account 1; the full site with the tabs opens | "Most students get no career guidance: in our survey of 87 students, 89.7% had no counsellor or got no help. Pathfinder recommends careers from every field, not just IT, and explains each one." |
 | 0:30 | **Quiz** (account 1): pick 1-2 areas (e.g. Healthcare), a course, rate interests, skills and subjects, pick 3 strongest and 2 weakest skills, a workday and a place, and type a sentence in the last box | "One question per screen. The ratings are the 6 RIASEC interest types and 16 skill and subject rows, mapped to O*NET, the US government's database of about 900 careers." |
 | 1:30 | **My matches**: show "In your areas" and "Also worth a look" | "Every career is scored by our engine: interest fit, readiness (do your levels meet what the career needs) and strength fit (are your best skills the ones this career relies on). The reasons come only from your own answers." |
 | 2:15 | Open one career: "What you'd do", **Skills to build** / **You have this**, **How to get there** | "For each career: the skills you have, the ones to build, and an Indian education route." |
