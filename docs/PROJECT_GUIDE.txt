@@ -409,7 +409,7 @@ rated the same, text matches with an inline editor.
   Sentence-BERT all-MiniLM-L6-v2     Pre-trained (used)  text matching
   TF-IDF                             Fit on career text  fallback if Sentence-BERT missing
   Google Gemini (gemini-3.5-flash)   Pre-trained (API)   chatbot
-  XGBoost                            NOT run             package not installed (future work)
+  XGBoost                            Yes, only in CV     experiments/ml_compare.py comparison only (29 Oct)
 
 
 ==========================================================================================
@@ -443,7 +443,10 @@ C) ML vs engine (experiments/ml_compare.py): predict the aimed field. 77 student
    only 3 students).
      Majority baseline 35.1% acc / 0.104 macro-F1   Logistic Regression 60.5% / 0.527
      SVM (RBF) 58.4% / 0.412                       Random Forest 57.7% / 0.383
-     Engine v3 top-1 field 14.3% / 0.199           Engine v2 7.8% / 0.083
+     Engine v3 top-1 field 14.3% / 0.199           Engine v2 7.8% / 0.079
+     XGBoost 56.6% / 0.374 (run 29 Oct; no class balancing, unlike the others)
+   (v2's macro-F1 was 0.083 on tanisha's PC: v2 has exact ties for 7 students and tie order
+    differs between PCs; accuracy and every other number are the same.)
    (Favours the models: they choose among 5 fields; the engine ranks ~900 careers.)
 
 D) Which inputs (experiments/model_features.py, same folds, rule fixed in advance):

@@ -45,6 +45,12 @@ engine and random. The app's field model trains on all responses (more fields it
 
 ## Limitations to write in the report
 
+- XGBoost (`ml_compare.csv`, run 29 Oct once the package was installed): 56.6% accuracy / 0.374 macro-F1. Unlike the
+  other three models it ran WITHOUT class balancing (XGBClassifier has no class_weight option), which hurts small fields.
+- Engine v2 gives exactly equal top scores to two careers for 7 of the 77 students (5 in different fields). Which one
+  comes first depends on how the computer sorts ties, so v2's macro-F1 can differ slightly between PCs
+  (0.083 on one, 0.079 on another; accuracy 7.8% on both). Engine v3 and all other numbers are unaffected.
+
 - Q8 is the field a 1st-3rd year student is **aiming for**, not a proven fit or a later job. Agreement with it
   is a sanity check, not "accuracy".
 - Small sample from one college; fields with few students give unstable numbers (see the confidence intervals).

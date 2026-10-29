@@ -43,7 +43,7 @@ If something fails: stay calm and say what it would show. You can also open `/do
 | Careers | O*NET 31.0: 910 rankable, 903 after the India rules |
 | Hit@1 / Hit@5 (81 students) | Hybrid (answers + branch) **66.4% / 71.4%**; answers only 57.0% / 66.2%; engine v3 14.8% / 35.8%; random 9.0% / 36.2% |
 | Field model (77 students, 5 fields) | Logistic Regression 60.5% accuracy, macro-F1 0.527; with branch 69.6% / 0.636; majority guess 35.1% |
-| Other models | SVM 58.4% / 0.412; Random Forest 57.7% / 0.383 |
+| Other models | SVM 58.4% / 0.412; Random Forest 57.7% / 0.383; XGBoost 56.6% / 0.374 |
 | Survey study | Interests barely differ between fields (eta squared 0.01-0.04); Programming 0.52, Computer Science 0.41 |
 | All 139 responses | 10 fields instead of 5, so lower: hybrid + branch 48.6% / 55.5%, random 8.4% / 34.4% |
 | Tests | 139 automated tests pass |
@@ -65,8 +65,8 @@ It is agreement with a student's own plan, not proof of the right career. Random
 students from one college, a careful honest number matters more than a high one.
 
 **"Why not deep learning or XGBoost?"**
-With 87 students, a large model would overfit. We compared Logistic Regression, Random Forest and SVM with
-cross-validation, and the simplest one was best.
+With 87 students, a large model would overfit. We compared Logistic Regression, Random Forest, SVM and
+XGBoost with cross-validation, and the simplest one was best (XGBoost: 56.6% / 0.374 vs 60.5% / 0.527).
 
 **"Did you tune on your test data?"**
 No. The weights, the 3 places for the predicted field and the field map were fixed before we saw results.
