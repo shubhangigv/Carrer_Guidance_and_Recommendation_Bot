@@ -110,4 +110,4 @@ The O*NET-only checks (synthetic students) are in `docs/results/README.md`. The 
 O*NET 31.0 Database, National Center for O*NET Development, CC BY 4.0
 (https://www.onetcenter.org/db_releases.html). Raw files are not stored in this repository.
 
-See `CLAUDE.md` for the full design, decisions and status.
+
